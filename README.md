@@ -64,17 +64,14 @@ Source code reading
     std::string prototxt; // This should be folded into testArgs
     std::string caffemodel; // This should be folded into testArgs
     std::string cachemodel; // This should be folded into testArgs
-
     std::string profileName; // ok here?
     std::string profileFile;
     std::string configtarget;
     std::string calibTable;
     nvdla::QuantizationMode quantizationMode;
-
     NvU16 numBatches;
     nvdla::DataFormat inDataFormat;
     nvdla::DataType computePrecision;
-
     std::map<std::string, NvF32> tensorScales; };
   ```
   
@@ -155,12 +152,6 @@ Source code reading
         std::vector<ITensor *> mInputs;
         std::vector<ITensor *> mOutputs;
 
-        // provides layer dimension caching. Layers can be mutated in any order and dimensions queried at any point.
-        // So mutating a layer trims this, and querying always refills the cache up to the queried layer
-        //	mutable std::vector<Dims3> mDimensions;
-
-        // internal flags used by the builder that are not accessible through the API
-        // int mInternalBuildFlags{ InternalBuildFlags::kENABLE_GRAPH_OPTIMIZATIONS };
         OutputDimensionsFormula* mConvDims, *mDeconvDims, *mPoolDims;
       };
       
@@ -191,50 +182,87 @@ Source code reading
       ```
       * workflow
         1. parsing Caffe Network
-        ```c++
-        const IBlobNameToTensor* CaffeParser::parse(const char* deployFile, const char* modelFile, INetwork * network){
-          ...
-          network->setPoolingOutputDimensionsFormula(new CaffeParserPoolingDimsCallback);   //network->mPoolDims = new CaffeParserPoolingDimsCallback;
-          mModel = new dc::NetParameter();
-          readBinaryProto(mModel/*.get()*/, modelFile, mProtobufBufferSize);
-          mDeploy = new dc::NetParameter();
-          readTextProto(mDeploy/*.get()*/, deployFile);
-          CaffeWeightFactory weights(*mModel/**mModel.get()*/, false /*weightType == DataType::kHALF*/, mTmpAllocs);
-          for (int i = 0; i < mDeploy->input_size(); i++){
-            Dims4 dims;
-            ... // setting dims parameter
-            ITensor* tensor = network->addInput(mDeploy->input().Get(0).c_str(), dims);   //adding the generated tensor object into network->mTensors; adding the generated tensor object into network->mInputs.
-            mBlobNameToTensor->add(mDeploy->input().Get(0), tensor);   // recording tensor info into mBlobNameToTensor->mMap
-          }
-          for (int i = 0; i < mDeploy->layer_size() && ok; i++){
-            const dc::LayerParameter& layerMsg = mDeploy->layer(i);
-            if (layerMsg.type() == "Dropout"){
-               mBlobNameToTensor->add(layerMsg.top().Get(0), mBlobNameToTensor->find(layerMsg.bottom().Get(0).c_str()));
-               continue;
+          * integrate whole information into network from caffemodel and prototxt
+          ```c++
+          const IBlobNameToTensor* CaffeParser::parse(const char* deployFile, const char* modelFile, INetwork * network){
+            ...
+            network->setPoolingOutputDimensionsFormula(new CaffeParserPoolingDimsCallback);   //network->mPoolDims = new CaffeParserPoolingDimsCallback;
+            mModel = new dc::NetParameter();
+            readBinaryProto(mModel/*.get()*/, modelFile, mProtobufBufferSize);
+            mDeploy = new dc::NetParameter();
+            readTextProto(mDeploy/*.get()*/, deployFile);
+            CaffeWeightFactory weights(*mModel/**mModel.get()*/, false /*weightType == DataType::kHALF*/, mTmpAllocs);
+            for (int i = 0; i < mDeploy->input_size(); i++){
+              Dims4 dims;
+              ... // setting dims parameter
+              ITensor* tensor = network->addInput(mDeploy->input().Get(0).c_str(), dims);   //adding the generated tensor object into network->mTensors; adding the generated tensor object into network->mInputs.
+              mBlobNameToTensor->add(mDeploy->input().Get(0), tensor);   // recording tensor info into mBlobNameToTensor->mMap
             }
-            if (layerMsg.type() == "Input"){
-              const dc::InputParameter& p = layerMsg.input_param();
-              for (int i = 0; i < layerMsg.top_size(); i++){
-                const dc::BlobShape& shape = p.shape().Get(i);
-                Dims4 dims(shape.dim().Get(0), shape.dim().Get(1), shape.dim().Get(2), shape.dim().Get(3));
-                ITensor* tensor = network->addInput(layerMsg.top(i).c_str(), dims);
-                mBlobNameToTensor->add(layerMsg.top().Get(i), tensor);
+            for (int i = 0; i < mDeploy->layer_size() && ok; i++){
+              const dc::LayerParameter& layerMsg = mDeploy->layer(i);
+              if (layerMsg.type() == "Dropout"){
+                mBlobNameToTensor->add(layerMsg.top().Get(0), mBlobNameToTensor->find(layerMsg.bottom().Get(0).c_str()));
+                continue;
               }
-              continue;
+              if (layerMsg.type() == "Input"){
+                const dc::InputParameter& p = layerMsg.input_param();
+                for (int i = 0; i < layerMsg.top_size(); i++){
+                  const dc::BlobShape& shape = p.shape().Get(i);
+                  Dims4 dims(shape.dim().Get(0), shape.dim().Get(1), shape.dim().Get(2), shape.dim().Get(3));
+                  ITensor* tensor = network->addInput(layerMsg.top(i).c_str(), dims);
+                  mBlobNameToTensor->add(layerMsg.top().Get(i), tensor);
+                }
+                continue;
+              }
+              if (layerMsg.type() == "Flatten"){
+                ITensor* tensor = (*mBlobNameToTensor)[layerMsg.bottom().Get(0)];
+                (*mBlobNameToTensor)[layerMsg.top().Get(0)] = tensor;
+                std::cout << "Warning: Flatten layer ignored." << std::endl;
+                continue;
+              }
+              LayerParseFnMap::iterator v = gParseTable.find(layerMsg.type());
+              ILayer* layer = (*v->second)(network, layerMsg, weights, mBlobNameToTensor); // parsing each layer and integrating corresponding layer informaion into network->mlayers
+              layer->setName(layerMsg.name().c_str());
+              mBlobNameToTensor->add(layerMsg.top(0), layer->getOutput(0));   //recording the output of each layer into mBlobNameToTensor->mMap
             }
-            if (layerMsg.type() == "Flatten"){
-              ITensor* tensor = (*mBlobNameToTensor)[layerMsg.bottom().Get(0)];
-              (*mBlobNameToTensor)[layerMsg.top().Get(0)] = tensor;
-              std::cout << "Warning: Flatten layer ignored." << std::endl;
-              continue;
-            }
-            LayerParseFnMap::iterator v = gParseTable.find(layerMsg.type());
-            ILayer* layer = (*v->second)(network, layerMsg, weights, mBlobNameToTensor);
-            layer->setName(layerMsg.name().c_str());
-            mBlobNameToTensor->add(layerMsg.top(0), layer->getOutput(0));   //recording the output of each layer into mBlobNameToTensor->mMap
           }
-        }
-        ```
+          ```
+          * recording information for each layer into network（network->mlayers), taking convolutional layer as an example. 
+          ```
+          1. static ILayer* parseConvolution(INetwork *network, const dc::LayerParameter& msg, CaffeWeightFactory& weightFactory, IBlobNameToTensor* tensors){
+              ...
+              // TODO: cross-correlation vs convolution
+              layer = network->addConvolution((*tensors)[msg.bottom(0)], numOutputs, 0, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
+              return layer;
+             }
+          2. IConvolutionLayer* Network::addConvolution(ITensor* inputTensor, int numOutputChannels, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups){
+              string name = newLayerName();
+              ITensor* output = addTensor(newTensorName());
+              Tensor*  output_priv = TensorFactory::priv(output);
+              ConvolutionLayerDiamond d = LayerFactory::newConvolutionLayer(this, name, inputTensor, output, numOutputChannels, paddingValue, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
+              output->setDimensions( d.derived().priv()->getOutputDimensions() );
+              mLayers.push_back(d.base().i());
+              return d.derived().i();
+             }
+          3. ConvolutionLayerDiamond LayerFactory::newConvolutionLayer(INetwork * network, const std::string & name, ITensor * input, ITensor * output, int numOutputMaps, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups){
+              ...
+              base_priv = derived_priv = new ConvolutionLayer(network, name, input, output, numOutputMaps, paddingValue, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
+              ...
+             }
+          4. ConvolutionLayer::ConvolutionLayer(INetwork* network, const std::string& name, ITensor* input, ITensor* output, int numOutputMaps, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups): Layer(network, LayerType::kCONVOLUTION, name, input, output){
+              mParams.kernelSize = kernelSize;   // each layer possesses a mParams displaying the parameters setting
+              mParams.numOutputMaps = numOutputMaps;
+              mParams.topLeftPadding = tlPadding;
+              mParams.bottomRightPadding = brPadding;
+              mParams.paddingValue = paddingValue;
+              mParams.stride = stride;
+              mParams.dilation = dilation;
+              mParams.kernelWeights = kernelWeights;
+              mParams.biasWeights = biasWeights;
+              mParams.biasMode = biasMode;
+              mParams.numGroups = numGroups;
+             }
+          ```
         2. marking the network's outputs
         3. parsing and setting tensor scales according to computation precision
         4. attaching parsed network to the wisdom
