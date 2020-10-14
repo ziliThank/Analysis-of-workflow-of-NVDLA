@@ -214,7 +214,7 @@ Source code reading
         ```
       * workflow
         1. parsing Caffe Network
-          * integrate whole information into network from caffemodel and prototxt
+          * integrating whole information into network from caffemodel and prototxt
           ```c++
           const IBlobNameToTensor* CaffeParser::parse(const char* deployFile, const char* modelFile, INetwork * network){
             ...
@@ -306,6 +306,5 @@ Source code reading
         ```c++
         wisdom->setNetworkTransient(network);
         ```
-       
   3. Compile
 
