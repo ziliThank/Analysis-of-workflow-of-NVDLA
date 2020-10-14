@@ -267,37 +267,37 @@ Source code reading
           * recording information for each layer into network（network->mlayers), taking convolutional layer as an example. 
           ```c++
           1. static ILayer* parseConvolution(INetwork *network, const dc::LayerParameter& msg, CaffeWeightFactory& weightFactory, IBlobNameToTensor* tensors){
-              ...
-              // TODO: cross-correlation vs convolution
-              layer = network->addConvolution((*tensors)[msg.bottom(0)], numOutputs, 0, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
-              return layer;
+                ...
+                // TODO: cross-correlation vs convolution
+                layer = network->addConvolution((*tensors)[msg.bottom(0)], numOutputs, 0, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
+                return layer;
              }
           2. IConvolutionLayer* Network::addConvolution(ITensor* inputTensor, int numOutputChannels, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups){
-              string name = newLayerName();
-              ITensor* output = addTensor(newTensorName());
-              Tensor*  output_priv = TensorFactory::priv(output);
-              ConvolutionLayerDiamond d = LayerFactory::newConvolutionLayer(this, name, inputTensor, output, numOutputChannels, paddingValue, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
-              output->setDimensions( d.derived().priv()->getOutputDimensions() );
-              mLayers.push_back(d.base().i());
-              return d.derived().i();
+                string name = newLayerName();
+                ITensor* output = addTensor(newTensorName());
+                Tensor*  output_priv = TensorFactory::priv(output);
+                ConvolutionLayerDiamond d = LayerFactory::newConvolutionLayer(this, name, inputTensor, output, numOutputChannels, paddingValue, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
+                output->setDimensions( d.derived().priv()->getOutputDimensions() );
+                mLayers.push_back(d.base().i());
+                return d.derived().i();
              }
           3. ConvolutionLayerDiamond LayerFactory::newConvolutionLayer(INetwork * network, const std::string & name, ITensor * input, ITensor * output, int numOutputMaps, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups){
-              ...
-              base_priv = derived_priv = new ConvolutionLayer(network, name, input, output, numOutputMaps, paddingValue, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
-              ...
+                ...
+                base_priv = derived_priv = new ConvolutionLayer(network, name, input, output, numOutputMaps, paddingValue, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
+                ...
              }
           4. ConvolutionLayer::ConvolutionLayer(INetwork* network, const std::string& name, ITensor* input, ITensor* output, int numOutputMaps, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups): Layer(network, LayerType::kCONVOLUTION, name, input, output){
-              mParams.kernelSize = kernelSize;   // each layer possesses a mParams displaying the parameters setting
-              mParams.numOutputMaps = numOutputMaps;
-              mParams.topLeftPadding = tlPadding;
-              mParams.bottomRightPadding = brPadding;
-              mParams.paddingValue = paddingValue;
-              mParams.stride = stride;
-              mParams.dilation = dilation;
-              mParams.kernelWeights = kernelWeights;
-              mParams.biasWeights = biasWeights;
-              mParams.biasMode = biasMode;
-              mParams.numGroups = numGroups;
+                mParams.kernelSize = kernelSize;   // each layer possesses a mParams displaying the parameters setting
+                mParams.numOutputMaps = numOutputMaps;
+                mParams.topLeftPadding = tlPadding;
+                mParams.bottomRightPadding = brPadding;
+                mParams.paddingValue = paddingValue;
+                mParams.stride = stride;
+                mParams.dilation = dilation;
+                mParams.kernelWeights = kernelWeights;
+                mParams.biasWeights = biasWeights;
+                mParams.biasMode = biasMode;
+                mParams.numGroups = numGroups;
              }
           ```
         2. marking the network's outputs
