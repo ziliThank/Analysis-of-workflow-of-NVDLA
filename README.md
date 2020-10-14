@@ -88,7 +88,7 @@ Source code reading
     1. Create new wisdom
     2. Parse
       * important classes
-      ```
+      ```c++
       class INetwork{
       public:
         virtual ITensor* addInput(const char * name, Dims4 dimensions) = 0;
@@ -158,7 +158,6 @@ Source code reading
       protected:
       INetwork();
       virtual ~INetwork();
-      
       };
       
       class Network : public INetwork{
@@ -202,7 +201,6 @@ Source code reading
 
         virtual NvU16 getFactoryType() const;
 
-
       public: // internally facing
         Network();
         virtual ~Network();
@@ -216,7 +214,6 @@ Source code reading
         void destroy();
 
       private:
-
         std::string newLayerName() const;
         std::string newTensorName() const;
 
@@ -229,12 +226,12 @@ Source code reading
         std::vector<ITensor *> mInputs;
         std::vector<ITensor *> mOutputs;
 
-    // provides layer dimension caching. Layers can be mutated in any order and dimensions queried at any point.
-    // So mutating a layer trims this, and querying always refills the cache up to the queried layer
-    //	mutable std::vector<Dims3> mDimensions;
+        // provides layer dimension caching. Layers can be mutated in any order and dimensions queried at any point.
+        // So mutating a layer trims this, and querying always refills the cache up to the queried layer
+        //	mutable std::vector<Dims3> mDimensions;
 
-    // internal flags used by the builder that are not accessible through the API
-    // int mInternalBuildFlags{ InternalBuildFlags::kENABLE_GRAPH_OPTIMIZATIONS };
+        // internal flags used by the builder that are not accessible through the API
+        // int mInternalBuildFlags{ InternalBuildFlags::kENABLE_GRAPH_OPTIMIZATIONS };
         OutputDimensionsFormula* mConvDims, *mDeconvDims, *mPoolDims;
       };
       
@@ -259,26 +256,58 @@ Source code reading
       };
 
       ```
-       
-        nvdla::caffe::ICaffeParser* parser = nvdla::caffe::createCaffeParser();
-        b = parser->parse(caffePrototxtFile.c_str(), caffeModelFile.c_str(), network);
-       ```c++
-       static NvDlaError parseCaffeNetwork(const TestAppArgs* appArgs, TestInfo* i){
-          const IBlobNameToTensor* CaffeParser::parse(const char*, const char*, INetwork *){
-          
-          INetwork *createNetwork(){
-            priv::NetworkFactory::NetworkPrivPair n = priv::NetworkFactory::newNetwork();
-            return n.i(); 
+      * workflow
+        1. parsing Caffe Network
+        ```c++
+        const IBlobNameToTensor* CaffeParser::parse(const char* deployFile, const char* modelFile, INetwork * network){
+          ...
+          network->setPoolingOutputDimensionsFormula(new CaffeParserPoolingDimsCallback);
+          mModel = new dc::NetParameter();
+          readBinaryProto(mModel/*.get()*/, modelFile, mProtobufBufferSize);
+          mDeploy = new dc::NetParameter();
+          readTextProto(mDeploy/*.get()*/, deployFile);
+          CaffeWeightFactory weights(*mModel/**mModel.get()*/, false /*weightType == DataType::kHALF*/, mTmpAllocs);
+          for (int i = 0; i < mDeploy->input_size(); i++){
+            Dims4 dims;
+            ... // setting dims parameter
+            ITensor* tensor = network->addInput(mDeploy->input().Get(0).c_str(), dims);
+            mBlobNameToTensor->add(mDeploy->input().Get(0), tensor);   // recording tensor info into mMap
           }
-          
+          for (int i = 0; i < mDeploy->layer_size() && ok; i++){
+            const dc::LayerParameter& layerMsg = mDeploy->layer(i);
+            if (layerMsg.type() == "Dropout"){
+               mBlobNameToTensor->add(layerMsg.top().Get(0), mBlobNameToTensor->find(layerMsg.bottom().Get(0).c_str()));
+               continue;
+            }
+            if (layerMsg.type() == "Input"){
+              const dc::InputParameter& p = layerMsg.input_param();
+              for (int i = 0; i < layerMsg.top_size(); i++){
+                const dc::BlobShape& shape = p.shape().Get(i);
+                Dims4 dims(shape.dim().Get(0), shape.dim().Get(1), shape.dim().Get(2), shape.dim().Get(3));
+                ITensor* tensor = network->addInput(layerMsg.top(i).c_str(), dims);
+                mBlobNameToTensor->add(layerMsg.top().Get(i), tensor);
+              }
+              continue;
+            }
+            if (layerMsg.type() == "Flatten"){
+              ITensor* tensor = (*mBlobNameToTensor)[layerMsg.bottom().Get(0)];
+              (*mBlobNameToTensor)[layerMsg.top().Get(0)] = tensor;
+              std::cout << "Warning: Flatten layer ignored." << std::endl;
+              continue;
+            }
+            LayerParseFnMap::iterator v = gParseTable.find(layerMsg.type());
+            ILayer* layer = (*v->second)(network, layerMsg, weights, mBlobNameToTensor);
+            layer->setName(layerMsg.name().c_str());
+            mBlobNameToTensor->add(layerMsg.top(0), layer->getOutput(0));
           }
-          marking the network's outputs;
-          parsing and setting tensor scales according to computation precision;
-          attaching parsed network to the wisdom;
-        
-       }
+        }
+        ```
+        2. marking the network's outputs
+        3. parsing and setting tensor scales according to computation precision
+        4. attaching parsed network to the wisdom
+        ```c++
+        wisdom->setNetworkTransient(network);
+        ```
        
-       ```
-       
-4. Compile
+  3. Compile
 
