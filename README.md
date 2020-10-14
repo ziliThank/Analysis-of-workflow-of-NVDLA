@@ -265,7 +265,7 @@ Source code reading
           }
           ```
           * recording information for each layer into network（network->mlayers), taking convolutional layer as an example. 
-          ```
+          ```c++
           1. static ILayer* parseConvolution(INetwork *network, const dc::LayerParameter& msg, CaffeWeightFactory& weightFactory, IBlobNameToTensor* tensors){
               ...
               // TODO: cross-correlation vs convolution
