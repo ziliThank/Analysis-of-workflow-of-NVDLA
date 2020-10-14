@@ -88,78 +88,7 @@ Source code reading
     1. Create new wisdom
     2. Parse
       * important classes
-      ```c++
-      class INetwork{
-      public:
-        virtual ITensor* addInput(const char * name, Dims4 dimensions) = 0;
-        //	virtual void markChanged(const ILayer *) = 0;
-        virtual bool markInput(ITensor * tensor) = 0;
-        virtual void markOutput(ITensor * tensor) = 0;
-        virtual IConvolutionLayer *    addConvolution   (ITensor * input, int numOutputs, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups) = 0;
-        virtual IFullyConnectedLayer * addFullyConnected(ITensor * input, int outputSize, Weights kernelWeights, Weights biasWeights, BiasMode biasMode) = 0;
-        virtual IActivationLayer *     addActivation    (ITensor * input, ActivationType type) = 0;
-        virtual IPoolingLayer *        addPooling       (ITensor * input, PoolingType type, Dims2 windowSize, Dims2 stride, Dims2 tlPadding, Dims2 brPadding) = 0;
-        virtual ILRNLayer *            addLRN           (ITensor * input, int window, float alpha, float beta, float k) = 0;
-        virtual IScaleLayer *          addScale         (ITensor * input, ScaleMode mode, Weights shift, Weights scale, Weights power) = 0;
-        virtual IBatchNormLayer *      addBatchNorm     (ITensor * input, BatchNormMode mode, Weights mean, Weights variance, float epsilon) = 0;
-        virtual ISoftMaxLayer *        addSoftMax       (ITensor*input) = 0;
-        virtual IConcatenationLayer *  addConcatenation (ITensor*const*inputs, int numInputs) = 0;
-        virtual ISliceLayer *          addSlice         (ITensor*input, int numOutputs) = 0;
-        virtual IDeconvolutionLayer *  addDeconvolution (ITensor * input, int numOutputs, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups) = 0;
-        virtual IElementWiseLayer   *  addElementWise   (ITensor *input0, ITensor* input1, ElementWiseOperation op) = 0;
-
-        virtual int getNumInputs()  const  = 0;
-        virtual int getNumOutputs() const  = 0;
-        virtual int getNumLayers()  const  = 0;
-
-        virtual ILayer  * getLayer(int index)  const = 0;
-        virtual ITensor * getOutput(int index) const = 0;
-        virtual ITensor * getInput(int index)  const = 0;
-
-        class OutputDimensionsFormula{
-        public:
-          virtual Dims2 compute(Dims2 inputDims, Dims2 kernelSize,  Dims2 stride, Dims2 tlPadding, Dims2 brPadding, const char* layerName) const = 0;
-          virtual Dims2 compute(Dims2 inputDims, Dims2 kernelSize,  Dims2 stride, Dims2 tlPadding, Dims2 brPadding, Dims2 dilation, const char* layerName) const = 0;
-          virtual ~OutputDimensionsFormula() { }
-        };
-
-        class NetworkDefaultConvolutionFormula : public OutputDimensionsFormula{
-        public:
-          virtual Dims2 compute(Dims2 input, Dims2 kernel, Dims2 stride, Dims2 tlPadding, Dims2 brPadding, const char*) const;
-          virtual Dims2 compute(Dims2 input, Dims2 kernel, Dims2 stride, Dims2 tlPadding, Dims2 brPadding, Dims2 dilation, const char*) const;
-        };
-
-        class NetworkDefaultDeconvolutionFormula : public OutputDimensionsFormula{
-        public:
-          virtual Dims2 compute(Dims2 input, Dims2 kernel, Dims2 stride, Dims2 tlPadding, Dims2 brPadding, const char*) const;
-          virtual Dims2 compute(Dims2 input, Dims2 kernel, Dims2 stride, Dims2 tlPadding, Dims2 brPadding, Dims2 dilation, const char*) const;
-        };
-
-        class NetworkDefaultPoolingFormula : public OutputDimensionsFormula{
-        public:
-          virtual Dims2 compute(Dims2 input, Dims2 kernel, Dims2 stride, Dims2 tlPadding, Dims2 brPadding, const char*) const;
-          virtual Dims2 compute(Dims2 /*input*/, Dims2 /*kernel*/, Dims2 /*stride*/, Dims2 /*tlPadding*/, Dims2 /*brPadding*/, Dims2 /*dilation*/, const char*) const{
-            return Dims2(-1, -1);
-          }
-        };
-
-        virtual void setPoolingOutputDimensionsFormula      (OutputDimensionsFormula* callback) = 0;
-        virtual void setConvolutionOutputDimensionsFormula  (OutputDimensionsFormula* callback) = 0;
-        virtual void setDeconvolutionOutputDimensionsFormula(OutputDimensionsFormula* callback) = 0;
-
-        virtual OutputDimensionsFormula& getPoolingOutputDimensionsFormula()       const = 0;
-        virtual OutputDimensionsFormula& getConvolutionOutputDimensionsFormula()   const = 0;
-        virtual OutputDimensionsFormula& getDeconvolutionOutputDimensionsFormula() const = 0;
-
-        virtual const std::vector<ITensor *> & getInputs()  const = 0;
-        virtual const std::vector<ILayer * > & getLayers()  const = 0;
-        virtual const std::vector<ITensor *> & getOutputs() const = 0;
-
-      protected:
-      INetwork();
-      virtual ~INetwork();
-      };
-      
+      ```c++      
       class Network : public INetwork{
       public: // externally facing
         virtual ITensor* addInput(const char* name, Dims4 dimensions);
@@ -235,15 +164,6 @@ Source code reading
         OutputDimensionsFormula* mConvDims, *mDeconvDims, *mPoolDims;
       };
       
-      class IBlobNameToTensor{
-      public:
-        virtual void add(const std::string& name, ITensor* tensor) = 0;
-        virtual ITensor* find(const char* name) const = 0;
-        virtual ITensor*& operator[](const std::string& name) = 0;
-        virtual void setTensorNames() = 0;
-        virtual ~IBlobNameToTensor();
-      };
-      
       class BlobNameToTensor : public IBlobNameToTensor{
       public:
         virtual void add(const std::string& name, ITensor* tensor);
@@ -254,6 +174,19 @@ Source code reading
       private:
         std::map<std::string, ITensor*> mMap;
       };
+      
+      class Tensor  : public ITensor{
+        ...
+      protected:
+        Dims4             mDimensions;
+        INetwork*         mNetwork;
+        std::string       mName;    // the user name if the user provided one, else
+        DataFormat        mDataFormat;
+        DataType          mDataType;
+        TensorType        mTensorType; // the type of surface this tensor represents: image/i-o/kernel/bias
+        std::vector<NvF32> mChnlScales;     // per-channel scaling factors
+        std::vector<NvF32> mChnlOffsets;    // per-channel offsets
+      };
 
       ```
       * workflow
@@ -261,7 +194,7 @@ Source code reading
         ```c++
         const IBlobNameToTensor* CaffeParser::parse(const char* deployFile, const char* modelFile, INetwork * network){
           ...
-          network->setPoolingOutputDimensionsFormula(new CaffeParserPoolingDimsCallback);
+          network->setPoolingOutputDimensionsFormula(new CaffeParserPoolingDimsCallback);   //network->mPoolDims = new CaffeParserPoolingDimsCallback;
           mModel = new dc::NetParameter();
           readBinaryProto(mModel/*.get()*/, modelFile, mProtobufBufferSize);
           mDeploy = new dc::NetParameter();
@@ -270,8 +203,8 @@ Source code reading
           for (int i = 0; i < mDeploy->input_size(); i++){
             Dims4 dims;
             ... // setting dims parameter
-            ITensor* tensor = network->addInput(mDeploy->input().Get(0).c_str(), dims);
-            mBlobNameToTensor->add(mDeploy->input().Get(0), tensor);   // recording tensor info into mMap
+            ITensor* tensor = network->addInput(mDeploy->input().Get(0).c_str(), dims);   //adding the generated tensor object into network->mTensors; adding the generated tensor object into network->mInputs.
+            mBlobNameToTensor->add(mDeploy->input().Get(0), tensor);   // recording tensor info into mBlobNameToTensor->mMap
           }
           for (int i = 0; i < mDeploy->layer_size() && ok; i++){
             const dc::LayerParameter& layerMsg = mDeploy->layer(i);
@@ -298,7 +231,7 @@ Source code reading
             LayerParseFnMap::iterator v = gParseTable.find(layerMsg.type());
             ILayer* layer = (*v->second)(network, layerMsg, weights, mBlobNameToTensor);
             layer->setName(layerMsg.name().c_str());
-            mBlobNameToTensor->add(layerMsg.top(0), layer->getOutput(0));
+            mBlobNameToTensor->add(layerMsg.top(0), layer->getOutput(0));   //recording the output of each layer into mBlobNameToTensor->mMap
           }
         }
         ```
