@@ -308,3 +308,51 @@ Source code reading
         ```
   3. Compile
 
+
+NVDLA Virtual Platform
+======================
+## about NVDLA
+  NVDLA is provided as a set of IP-core models based on open industry standards: the Verilog model is a synthesis and simulation model in RTL form, and the TLM SystemC simulation model can be used for software development, system integration and testing. 
+### Hardware
+  NVDLA introduces a modular architecture designed to simplify configuration, integration and portability; it exposes the building blocks used to accelerate core Deep Learning inference operations. NVDLA hardware is comprised of the following components:
+
+    1. Convolution Core – optimized high-performance convolution engine.
+    2. Single Data Processor – single-point lookup engine for activation functions.
+    3. Planar Data Processor – planar averaging engine for pooling.
+    4. Channel Data Processor – multi-channel averaging engine for advanced normalization functions.
+    5. Dedicated Memory and Data Reshape Engines – memory-to-memory transformation acceleration for tensor reshape and copy operations.
+
+   Each of these blocks are separate and independently configurable. A system that has no need for pooling, for instance, can remove the planar averaging engine entirely; or, a system that needs additional convolutional performance can scale up the performance of the convolution unit without modifying other units in the accelerator. Scheduling operations for each unit are delegated to a co-processor or CPU; they operate on extremely fine-grained scheduling boundaries with each unit operating independently. This requirement for closely-managed scheduling can be made part of the NVDLA sub-system with the addition of a dedicated management coprocessor (“headed” implementation), or this functionality can be fused with the higher-level driver implementation on the main system processor (“headless” implementation).
+### Software
+#### Compilation tools: model conversion
+   Compiler is responsible for creating a sequence of hardware layers that are optimized for a given NVDLA configuration; having an optimized network of hardware layers increases performance by reducing model size, load and run times.
+  1. Parser
+   It can read a pre-trained Caffe model and create an “intermediate representation” of a network to pass to the next step of compilation.
+  2. Compiler 
+   The compiler takes the parsed intermediate representation and the hardware configuration of an NVDLA implementation as its inputs, and generates a network of hardware layers.
+#### Runtime environment: run-time software to load and execute networks on NVDLA
+   The runtime environment involves running a model on compatible NVDLA hardware. It is effectively divided into two layers:
+   1. User Mode Driver
+   The main interface with user-mode programs. After parsing the neural network, compiler compiles network layer by layer and converts it into a file format called NVDLA Loadable. User mode runtime driver loads this loadable and submits inference job to Kernel Mode Driver.
+    2. Kernel Mode Driver
+   Consists of drivers and firmware that do the work of scheduling layer operations on NVDLA and programming the NVDLA registers to configure each functional block. 
+   
+   Sample platforms are provided which allow users to observe, evaluate, and test NVDLA in a minimal SoC environment. A minimum SoC system configuration consists of a CPU, an NVDLA instance, an interconnect, and memories.
+   
+   Software
+The initial NVDLA open-source release includes software for a “headless” implementation, compatible with Linux. Both a kernel-mode driver and a user-mode test utility are provided in source form, and can run on top of otherwise-unmodified Linux systems.
+
+   The Verilog code included in this release is parameterized such that multiple configurations can be generated from a single source. A hardware tree build is needed to generate the final Verilog RTL code for a given configuration.
+   
+   For the configurable release, there are currently two spec files included: “nv_large” which has 2048 INT8 MAC’s, and “nv_small” which has 64 INT8 MAC’s plus some other reductions; the non-configurable release has a single spec file, “nv_full”, which has 2048 multi-precision MAC units
+   
+   If building the Virtual Platform, or another application that uses the NVDLA Cmodel, the following command will build it and install it into outdir/nv_full/cmod/release: ./tools/bin/tmake -build cmod_top
+   
+### Simulation
+  Virtual platforms reproduce system behavior, execution of target software, debug and development in the absence of "real" hardware platform. 
+#### QEMU
+  QEMU is a generic and open source machine & userspace emulator and virtualizer. QEMU is capable of emulating a complete machine in software without any need for hardware virtualization support. 
+  QBox is an industrial solution for virtual platform simulation using QEMU and SystemC TLM-2.0.
+  
+#### SystemC
+
