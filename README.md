@@ -493,12 +493,6 @@ Source code reading
       ...
     public: // internally facing
       ...
-      Loadable();
-      virtual ~Loadable();
-      virtual bool serialize();
-      virtual NvDlaError getSerializedData(NvU8 *buffer);
-      virtual NvDlaError getSerializedDataSize(NvU64 *size);
-      virtual bool deserializeFrom(NvU8 *);
       struct Symbol {
           std::string name;
           ILoadable::Interface interface;
@@ -528,11 +522,7 @@ Source code reading
     
     class Profile : public IProfile{
     public: // externally facing
-      Profile() { }
-      virtual ~Profile() { }
-      virtual const char* getName() const;
-      virtual NvDlaError getNumLoadables(int *) const;
-      virtual NvDlaError getLoadable(const std::string &name, int index, ILoadable **);
+      ...
     public: // internally facing
       ...
       struct GlobalParams {
@@ -579,17 +569,12 @@ Source code reading
       CompileParams m_compileParams;
     };
     
+    
     class Profiler : public IProfiler {
     public: // externally facing
-      virtual IWisdom *wisdom();
-      virtual IProfile *createProfile(const char *profile_name);
-      virtual IProfile *getProfile(const char *profile_name);
-      virtual ITargetConfig *getTargetConfig(const char *target_config_name);
+      ...
     public: // internally facing
-      Profiler();
-      virtual ~Profiler();
-      virtual NvU16 getFactoryType() const;
-      void setWisdom(Wisdom *w) { m_wisdom = w; }
+      ...
     protected:
       friend class Wisdom;
       friend class ProfilerFactory;
@@ -598,21 +583,16 @@ Source code reading
       std::map<std::string, TargetConfigFactory::TargetConfigPrivPair> m_targetConfigs;
     };
     
+    
     class Compiler : public ICompiler {
     public: // externally facing
-      virtual IWisdom *wisdom() const;
-      virtual NvDlaError getDataType(DataType::UnderlyingType *d) const;
+      ...
       virtual NvDlaError compile(const char *profile_name, const char *target_config_name, ILoadable **); // "" := default
       virtual NvDlaError getLoadableImage(const char *profile_name, NvU8 *flatbuf);
       virtual NvDlaError getLoadableImageSize(const char *profile_name, NvU64 *size);
       virtual NvDlaError compileCheck(const char *, const char *);
     public: // internally facing
       NvDlaError emit(engine_ast::Graph * g, LoadableFactory::LoadablePrivPair &);
-      Compiler();
-      virtual ~Compiler();
-      void setWisdom(Wisdom *w) { m_wisdom = w; }
-      virtual NvU16 getFactoryType() const;
-      inline bool debugVersions() const { return false; }
       ...
       inline bool debugProfile() const { return false; }
     protected:
@@ -634,6 +614,38 @@ Source code reading
     private:
       NvDlaError getLoadableFromWisdom(const char *test_point_name, ILoadable **i);
     };
+    
+    
+    class Wisdom : public IWisdom {
+    public:
+      ...
+    public:// internally facing
+      virtual bool findITensorSymbol(ITensor *, std::string &);
+      virtual bool findTensorSymbol (Tensor *,  std::string &);
+      virtual bool findILayerSymbol(ILayer *, std::string &);
+      virtual bool findLayerSymbol(Layer *, std::string &);
+      virtual bool findILoadableSymbol(ILoadable *, std::string &);
+      virtual bool findLoadableSymbol(Loadable *, std::string &);
+      virtual bool findIProfileSymbol(IProfile *, std::string &);
+      virtual bool findProfileSymbol(Profile *, std::string &);
+      
+    protected:
+      WisdomContainer *m_container;
+      INetwork *m_network;
+
+      SymbolTable m_symbol_table;
+
+      LayerFactory m_layer_factory;
+      NetworkFactory m_network_factory;
+      TensorFactory m_tensor_factory;
+      LoadableFactory m_loadable_factory;
+
+      ICompiler *m_compiler;
+      IProfiler *m_profiler;
+
+      DataType m_data_type;
+    };
+    
     ```
     
     把参数命令参数信息存入到profile里
@@ -642,19 +654,97 @@ Source code reading
     ```
     
     ```c++
-    // this version hands back to the active profile with only the name of the profile
-    // for look up later.  this creates the "same name as the profile" loadable.
-    //
+    // this version hands back to the active profile with only the name of the profile for look up later
     m_wisdom->insertProfileSymbol( ProfileFactory::i(profile), profile->getName());
-    profile->insertLoadable( std::string(profile->getName()), -1, l.i() );
-
-    // build flatbuffer and save it internally
-    (void)l.priv()->serialize();
-
-    if ( peli ) {
-        *peli = l.i();
+    bool Wisdom::insertProfileSymbol(IProfile *profile, const std::string &sym) {
+    // gLogError << "this=" << this << " profile=" << profile << " sym=[" << sym << "]" << endl;
+       return m_symbol_table.insertProfile(profile, sym);
     }
     ```
+    compiler对象的Wisdom属性m_wisdom，m_wisdom对象拥有一个SymbolTable属性m_symbol_table，该类大致描述如下:
+    
+    ```c++
+    class SymbolTable {
+    public:
+      bool insertNetwork(INetwork *net, const std::string &sym);
+      bool insertLayer(ILayer *layer, const std::string &sym);
+      bool insertTensor(ITensor *tensor, const std::string &sym);
+      bool insertLoadable(ILoadable *loadable, const std::string &sym);
+      bool insertProfile(IProfile *profile, const std::string &sym);
+
+      INetwork *findNetwork(const std::string &sym);
+      bool findNetwork(Network *, std::string &sym);
+      ILayer *findLayer(const std::string &sym);
+      bool findLayer(Layer *l, std::string &sym);
+      ITensor *findTensor(const std::string &sym);
+      bool findTensor(Tensor *t, std::string &sym);
+      ILoadable *findLoadable(const std::string &sym);
+      bool findLoadable(Loadable *l, std::string &sym);
+      IProfile *findProfile(const std::string &sym);
+      bool findProfile(Profile *p, std::string &sym);
+
+    protected:
+      typedef BiMap<std::string, INetwork *>::left_iterator SymNetIter;
+      typedef BiMap<std::string, INetwork *>::right_iterator NetSymIter;
+      typedef std::map<std::string, ILayer *>::iterator SymLayerIter;
+      typedef std::map<ILayer *, std::string>::iterator LayerSymIter;
+      typedef std::map<std::string, ITensor *>::iterator SymTensorIter;
+      typedef std::map<ITensor *, std::string>::iterator TensorSymIter;
+      typedef std::map<std::string, ILoadable *>::iterator SymLoadableIter;
+      typedef std::map<ILoadable *, std::string>::iterator LoadableSymIter;
+      typedef std::map<std::string, IProfile *>::iterator SymProfileIter;
+      typedef std::map<IProfile *, std::string>::iterator ProfileSymIter;
+
+      BiMap<std::string, INetwork *> m_sym_net;
+      std::map<std::string, ILayer *> m_sym_layer;
+      std::map<ILayer *, std::string> m_layer_sym;
+      std::map<std::string, ITensor *> m_sym_tensor;
+      std::map<ITensor *, std::string> m_tensor_sym;
+      std::map<std::string, ILoadable *> m_sym_loadable;
+      std::map<ILoadable *, std::string> m_loadable_sym;
+      std::map<std::string, IProfile *> m_sym_profile;
+      std::map<IProfile *, std::string> m_profile_sym;
+    };
+    ```
+    profile对象拥有属性m_loadablesByName（map<string, ILoadable *>）,用以记录profileName以及其对应的ILoadable指针。
+    ```c++
+    // this creates the “same name as the profile" loadable.
+    profile->insertLoadable( std::string(profile->getName()), -1, l.i() );
+    NvDlaError Profile::insertLoadable(const std::string & name, int index, ILoadable *i_loadable) {
+      if (nameSpecified) {
+          if (debug()) {
+              gLogInfo << "profile insertLoadable saving loadable with name " << name << endl;
+          }
+          m_loadablesByName[name] = i_loadable;
+      }
+    }
+    ```
+    其中, 关于loadable对象的生成具体过程如下:
+    ```c++ 
+    LoadableFactory::PrivPair<ILoadable *, Loadable*> l(0, 0);
+    engine_ast::Graph *final_g = 0;
+      ...
+    PROPAGATE_ERROR_FAIL(emit(final_g, l));
+    ```
+    
+    * engine_ast
+    EngineParams hold all the details needed to program the HW engine. Some of the engine parameters are directly inherited from the canonical AST equivalent operations, whereas some others are computed over the course of engine AST compilation. 
+    In short, only those parameters which are directly needed for HW engine programming should be held in EngineParameters. Any dynamic state for assisting compilation should be held in the OpParams of respective engine nodes. 
+    关于emit函数:
+    dla 
+    emu
+    ```c++
+    
+    ```
+    q其中涉及到的类GlobalAddressList
+    ```c++
+    
+    ```
+
+    
+    
+    
+
 
 
 
