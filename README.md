@@ -733,12 +733,100 @@ Source code reading
     关于emit函数:
     dla 
     emu
-    ```c++
     
+    begin building execution context and placing into the loadable:
+    ```c++
+    g->resetRelocEntries();
+    
+    PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );
+    
+    task_slot_counts.resize(g->graphlets().size()); // vector< size_t > task_slot_counts;
+    
+    for (vector<engine_ast::Graph::Graphlet *>::iterator gli = g->graphlets().begin(); gli != g->graphlets().end(); ++gli) {
+        engine_ast::Graph::Graphlet *graphlet = *gli;
+        NvS16 taskId;
+        engine_ast::Node *first_node;
+        NVDLA_UNUSED(taskId);
+
+        first_node = *graphlet->nodeList().begin();
+        task_starting_points.push_back(graphlet->nodeList().begin()); // vector< vector<engine_ast::Node* >::iterator > task_starting_points;
+        task_ids.push_back(first_node->taskId());  // vector< NvS16  > task_ids;
+        task_slot_counts[task_starting_points.size() - 1] = graphlet->nodeList().size();  // vector< size_t > task_slot_counts;
+    }
+    num_tasks = task_starting_points.size();
+
+    gal = GlobalAddressList(num_tasks, loadable->getMemoryListEntries(), loadable->getAddressListEntries());
+    Ni = gal.numInstrAddrEntries();
+    
+    task_list_entries.resize(num_tasks);  // vector<ILoadable::TaskListEntry> task_list_entries;
     ```
+    
+    scan the set of tasks and assign to submit list entries
+    ```c++
+    for ( size_t ti = 0; ti < num_tasks; ++ti) {
+        ILoadable::SubmitListEntry sle;
+        sle.id = task_ids.at(ti);
+        sle.tasks.push_back(sle.id);
+        submit_list_entries.push_back(sle);
+    }
+    ```
+    One chain (target 0) exists to provide inter-task synchronization. This is the chain that keeps cpu(emu) and hw(dla) tasks synchronized. At the end of that chain is an output-bindable even that the caller can use to wait for completion. 
+    ```c++
+    event_list_entries.clear();
+    event.id     = 0;
+    event.val    = 0;
+    event.target = 0;
+    ```
+    for each task ...
+    ```c++
+    too too too too long 耍流氓版
+    ```
+    Now that all the tasks have set up their context state elements the memory and address lists are viable.
+    ```c++
+    loadable->setMemoryListEntries(gal.memList());
+    loadable->setAddressListEntries(gal.addrList());
+    loadable->setTaskListEntries(task_list_entries);
+    loadable->setSubmitListEntries(submit_list_entries);
+    loadable->setEventListEntries(event_list_entries);
+    loadable->setRelocEntries(g->getRelocEntries());
+    ```
+    
+    
     q其中涉及到的类GlobalAddressList
     ```c++
-    
+    class GlobalAddressList {
+    public:
+        ...
+        GlobalAddressList(size_t numTasks, const std::vector<Loadable::MemoryListEntry> &instrMemEntries, const std::vector<Loadable::AddressListEntry> &instrAddrEntries) {
+            //
+            // create mem id and address id entries for the dead page at address id == 0.
+            //
+            Loadable::MemoryListEntry  memZeroEntry(0, 4096, 4096, Loadable::MemoryListEntry::domain_sysmem(), Loadable::MemoryListEntry::flags_alloc());
+            Loadable::AddressListEntry addrZeroEntry(0, memZeroEntry.id, memZeroEntry.size);
+            m_memListEntries.push_back(memZeroEntry);
+            m_addrListEntries.push_back(addrZeroEntry);
+            m_memListEntries.insert (m_memListEntries.end(),  instrMemEntries.begin(),  instrMemEntries.end());
+            m_addrListEntries.insert(m_addrListEntries.end(), instrAddrEntries.begin(), instrAddrEntries.end());
+            m_numInstrMemEntries  = instrMemEntries.size();
+            m_numInstrAddrEntries = instrAddrEntries.size();
+            m_numTasks = numTasks;
+            m_addrListEntries.resize( 1 /*the zero entry*/ + m_numInstrAddrEntries + (TaskAddressList::numContextAddrs() * m_numTasks), addrZeroEntry /* fill with references to the zero mem entry */);
+        }
+        NvS16 taskContextBegin(NvS16 taskId) const {
+            // skip 0, then 1..n is 1..numInstrAddrEntries
+            return (m_numInstrAddrEntries + 1) + (taskId * TaskAddressList::numContextAddrs());
+        }
+        NvS16 taskContextEnd(NvS16 taskId) const { // ala iterator, points to one-beyond
+            return taskContextBegin(taskId) + TaskAddressList::numContextAddrs();
+        }
+        ...
+    protected:
+        size_t m_numInstrMemEntries;
+        size_t m_numInstrAddrEntries;
+        vector<ILoadable::MemoryListEntry> m_memListEntries;
+        vector<ILoadable::AddressListEntry> m_addrListEntries;
+        size_t m_numTasks;
+    };
     ```
 
     
