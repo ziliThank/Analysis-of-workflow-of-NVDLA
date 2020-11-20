@@ -325,9 +325,10 @@ Source code reading
         ```c++
         wisdom->setNetworkTransient(network);
         ```
-  3. Compile
-  4. Loadable
-    * loadable file 
+
+    3. Compile
+    4. Loadable
+        * loadable file 
     
     ```c++
     class ILoadable{
