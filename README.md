@@ -349,35 +349,9 @@ Source code reading
     ```c++
     class SymbolTable {
     public:
-      bool insertNetwork(INetwork *net, const std::string &sym);
-      bool insertLayer(ILayer *layer, const std::string &sym);
-      bool insertTensor(ITensor *tensor, const std::string &sym);
-      bool insertLoadable(ILoadable *loadable, const std::string &sym);
-      bool insertProfile(IProfile *profile, const std::string &sym);
-
-      INetwork *findNetwork(const std::string &sym);
-      bool findNetwork(Network *, std::string &sym);
-      ILayer *findLayer(const std::string &sym);
-      bool findLayer(Layer *l, std::string &sym);
-      ITensor *findTensor(const std::string &sym);
-      bool findTensor(Tensor *t, std::string &sym);
-      ILoadable *findLoadable(const std::string &sym);
-      bool findLoadable(Loadable *l, std::string &sym);
-      IProfile *findProfile(const std::string &sym);
-      bool findProfile(Profile *p, std::string &sym);
-
+      ...
     protected:
-      typedef BiMap<std::string, INetwork *>::left_iterator SymNetIter;
-      typedef BiMap<std::string, INetwork *>::right_iterator NetSymIter;
-      typedef std::map<std::string, ILayer *>::iterator SymLayerIter;
-      typedef std::map<ILayer *, std::string>::iterator LayerSymIter;
-      typedef std::map<std::string, ITensor *>::iterator SymTensorIter;
-      typedef std::map<ITensor *, std::string>::iterator TensorSymIter;
-      typedef std::map<std::string, ILoadable *>::iterator SymLoadableIter;
-      typedef std::map<ILoadable *, std::string>::iterator LoadableSymIter;
-      typedef std::map<std::string, IProfile *>::iterator SymProfileIter;
-      typedef std::map<IProfile *, std::string>::iterator ProfileSymIter;
-
+      ...
       BiMap<std::string, INetwork *> m_sym_net;
       std::map<std::string, ILayer *> m_sym_layer;
       std::map<ILayer *, std::string> m_layer_sym;
