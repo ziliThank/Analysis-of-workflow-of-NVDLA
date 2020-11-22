@@ -292,43 +292,36 @@ Source code reading
           ```
           * NVDLA network object --> NVDLA Canonical Graph --> NVDLA engin_ast Graph --> Optimized NVDLA engine_ast Graph --> Final Graph           
           * Final Graph --> loadable file
-                ```c++ 
-                LoadableFactory::PrivPair<ILoadable *, Loadable*> l(0, 0);
-                engine_ast::Graph *final_g = 0;
-                  ...
-                PROPAGATE_ERROR_FAIL(emit(final_g, l));
-                ```
-                1. engine_ast
-                 EngineParams hold all the details needed to program the HW engine. Some of the engine parameters are directly inherited from the canonical AST equivalent operations, whereas some others are computed over the course of engine AST compilation.  In short, only those parameters which are directly needed for HW engine programming should be held in EngineParameters. Any dynamic state for assisting compilation should be held in the OpParams of respective engine nodes. 
-                 2. engine_ast  
-        关于emit函数:
-        dla 
-        emu
-    begin building execution context and placing into the loadable:
-       ```c++
-        g->resetRelocEntries();
-        PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );
+          ```c++ 
+          LoadableFactory::PrivPair<ILoadable *, Loadable*> l(0, 0);
+          engine_ast::Graph *final_g = 0;
+            ...
+          PROPAGATE_ERROR_FAIL(emit(final_g, l));
+          ```
+             _ engine_ast
+              EngineParams hold all the details needed to program the HW engine. Some of the engine parameters are directly inherited from the canonical AST equivalent operations, whereas some others are computed over the course of engine AST compilation.  In short, only those parameters which are directly needed for HW engine programming should be held in EngineParameters. Any dynamic state for assisting compilation should be held in the OpParams of respective engine nodes. 
+            * 关于emit函数 dla emu
+             begin building execution context and placing into the loadable:
+             ```c++
+              g->resetRelocEntries();
+              PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );
+              task_slot_counts.resize(g->graphlets().size()); // vector< size_t > task_slot_counts;
+              for (vector<engine_ast::Graph::Graphlet *>::iterator gli = g->graphlets().begin(); gli != g->graphlets().end(); ++gli) {
+                  engine_ast::Graph::Graphlet *graphlet = *gli;
+                  NvS16 taskId;
+                  engine_ast::Node *first_node;
+                  NVDLA_UNUSED(taskId);
+                  first_node = *graphlet->nodeList().begin();
+                  task_starting_points.push_back(graphlet->nodeList().begin()); // vector< vector<engine_ast::Node* >::iterator > task_starting_points;
+                  task_ids.push_back(first_node->taskId());  // vector< NvS16  > task_ids;
+                  task_slot_counts[task_starting_points.size() - 1] = graphlet->nodeList().size();  // vector< size_t > task_slot_counts;
+              }
+              num_tasks = task_starting_points.size();
+              gal = GlobalAddressList(num_tasks, loadable->getMemoryListEntries(), loadable->getAddressListEntries());
+              Ni = gal.numInstrAddrEntries();
+              task_list_entries.resize(num_tasks);  // vector<ILoadable::TaskListEntry> task_list_entries;
+             ```
 
-        task_slot_counts.resize(g->graphlets().size()); // vector< size_t > task_slot_counts;
-
-        for (vector<engine_ast::Graph::Graphlet *>::iterator gli = g->graphlets().begin(); gli != g->graphlets().end(); ++gli) {
-            engine_ast::Graph::Graphlet *graphlet = *gli;
-            NvS16 taskId;
-            engine_ast::Node *first_node;
-            NVDLA_UNUSED(taskId);
-
-            first_node = *graphlet->nodeList().begin();
-            task_starting_points.push_back(graphlet->nodeList().begin()); // vector< vector<engine_ast::Node* >::iterator > task_starting_points;
-            task_ids.push_back(first_node->taskId());  // vector< NvS16  > task_ids;
-            task_slot_counts[task_starting_points.size() - 1] = graphlet->nodeList().size();  // vector< size_t > task_slot_counts;
-        }
-        num_tasks = task_starting_points.size();
-
-        gal = GlobalAddressList(num_tasks, loadable->getMemoryListEntries(), loadable->getAddressListEntries());
-        Ni = gal.numInstrAddrEntries();
-
-        task_list_entries.resize(num_tasks);  // vector<ILoadable::TaskListEntry> task_list_entries;
-      ```
     scan the set of tasks and assign to submit list entries
     ```c++
     for ( size_t ti = 0; ti < num_tasks; ++ti) {
