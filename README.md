@@ -329,95 +329,53 @@ Source code reading
     3. Compile
     4. Loadable
         * loadable file 
- 
-    
-    把参数命令参数信息存入到profile里
-    ```c++
-    NvDlaError generateProfile(const TestAppArgs* appArgs, std::string* profileName, TestInfo* i);
-    ```
-    
-    ```c++
-    // this version hands back to the active profile with only the name of the profile for look up later
-    m_wisdom->insertProfileSymbol( ProfileFactory::i(profile), profile->getName());
-    bool Wisdom::insertProfileSymbol(IProfile *profile, const std::string &sym) {
-    // gLogError << "this=" << this << " profile=" << profile << " sym=[" << sym << "]" << endl;
-       return m_symbol_table.insertProfile(profile, sym);
-    }
-    ```
-    compiler对象的Wisdom属性m_wisdom，m_wisdom对象拥有一个SymbolTable属性m_symbol_table，该类大致描述如下:
-    
-    ```c++
-    class SymbolTable {
-    public:
-      ...
-    protected:
-      ...
-      BiMap<std::string, INetwork *> m_sym_net;
-      std::map<std::string, ILayer *> m_sym_layer;
-      std::map<ILayer *, std::string> m_layer_sym;
-      std::map<std::string, ITensor *> m_sym_tensor;
-      std::map<ITensor *, std::string> m_tensor_sym;
-      std::map<std::string, ILoadable *> m_sym_loadable;
-      std::map<ILoadable *, std::string> m_loadable_sym;
-      std::map<std::string, IProfile *> m_sym_profile;
-      std::map<IProfile *, std::string> m_profile_sym;
-    };
-    ```
-    profile对象拥有属性m_loadablesByName（map<string, ILoadable *>）,用以记录profileName以及其对应的ILoadable指针。
-    ```c++
-    // this creates the “same name as the profile" loadable.
-    profile->insertLoadable( std::string(profile->getName()), -1, l.i() );
-    NvDlaError Profile::insertLoadable(const std::string & name, int index, ILoadable *i_loadable) {
-      if (nameSpecified) {
-          if (debug()) {
-              gLogInfo << "profile insertLoadable saving loadable with name " << name << endl;
-          }
-          m_loadablesByName[name] = i_loadable;
-      }
-    }
-    ```
-    其中, 关于loadable对象的生成具体过程如下:
-    ```c++ 
-    LoadableFactory::PrivPair<ILoadable *, Loadable*> l(0, 0);
-    engine_ast::Graph *final_g = 0;
-      ...
-    PROPAGATE_ERROR_FAIL(emit(final_g, l));
-    ```
-    
-    * engine_ast
-    EngineParams hold all the details needed to program the HW engine. Some of the engine parameters are directly inherited from the canonical AST equivalent operations, whereas some others are computed over the course of engine AST compilation. 
-    In short, only those parameters which are directly needed for HW engine programming should be held in EngineParameters. Any dynamic state for assisting compilation should be held in the OpParams of respective engine nodes. 
-    关于emit函数:
-    dla 
-    emu
-    
+        1. Updating the command parameter information into the object m_globalParams, m_compileParams of class Profile
+         ```c++
+          NvDlaError generateProfile(const TestAppArgs* appArgs, std::string* profileName, TestInfo* i);
+         ```
+         2. Compiling
+         ```c++
+          PROPAGATE_ERROR_FAIL(compiler->compile(profileName.c_str(), targetConfigName.c_str(), &i->compiledLoadable));
+          ```
+          * NVDLA network object --> NVDLA Canonical Graph --> NVDLA engin_ast Graph --> Optimized NVDLA engine_ast Graph --> Final Graph           
+          * Final Graph --> loadable file
+          ```c++ 
+          LoadableFactory::PrivPair<ILoadable *, Loadable*> l(0, 0);
+          engine_ast::Graph *final_g = 0;
+            ...
+          PROPAGATE_ERROR_FAIL(emit(final_g, l));
+          ```
+        1. engine_ast
+         EngineParams hold all the details needed to program the HW engine. Some of the engine parameters are directly inherited from the canonical AST equivalent operations, whereas some others are computed over the course of engine AST compilation.  In short, only those parameters which are directly needed for HW engine programming should be held in EngineParameters. Any dynamic state for assisting compilation should be held in the OpParams of respective engine nodes. 
+          2. engine_ast  
+        关于emit函数:
+        dla 
+        emu
     begin building execution context and placing into the loadable:
-    ```c++
-    g->resetRelocEntries();
-    
-    PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );
-    
-    task_slot_counts.resize(g->graphlets().size()); // vector< size_t > task_slot_counts;
-    
-    for (vector<engine_ast::Graph::Graphlet *>::iterator gli = g->graphlets().begin(); gli != g->graphlets().end(); ++gli) {
-        engine_ast::Graph::Graphlet *graphlet = *gli;
-        NvS16 taskId;
-        engine_ast::Node *first_node;
-        NVDLA_UNUSED(taskId);
+       ```c++
+        g->resetRelocEntries();
+        PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );
 
-        first_node = *graphlet->nodeList().begin();
-        task_starting_points.push_back(graphlet->nodeList().begin()); // vector< vector<engine_ast::Node* >::iterator > task_starting_points;
-        task_ids.push_back(first_node->taskId());  // vector< NvS16  > task_ids;
-        task_slot_counts[task_starting_points.size() - 1] = graphlet->nodeList().size();  // vector< size_t > task_slot_counts;
-    }
-    num_tasks = task_starting_points.size();
+        task_slot_counts.resize(g->graphlets().size()); // vector< size_t > task_slot_counts;
 
-    gal = GlobalAddressList(num_tasks, loadable->getMemoryListEntries(), loadable->getAddressListEntries());
-    Ni = gal.numInstrAddrEntries();
-    
-    task_list_entries.resize(num_tasks);  // vector<ILoadable::TaskListEntry> task_list_entries;
-    ```
-    
+        for (vector<engine_ast::Graph::Graphlet *>::iterator gli = g->graphlets().begin(); gli != g->graphlets().end(); ++gli) {
+            engine_ast::Graph::Graphlet *graphlet = *gli;
+            NvS16 taskId;
+            engine_ast::Node *first_node;
+            NVDLA_UNUSED(taskId);
+
+            first_node = *graphlet->nodeList().begin();
+            task_starting_points.push_back(graphlet->nodeList().begin()); // vector< vector<engine_ast::Node* >::iterator > task_starting_points;
+            task_ids.push_back(first_node->taskId());  // vector< NvS16  > task_ids;
+            task_slot_counts[task_starting_points.size() - 1] = graphlet->nodeList().size();  // vector< size_t > task_slot_counts;
+        }
+        num_tasks = task_starting_points.size();
+
+        gal = GlobalAddressList(num_tasks, loadable->getMemoryListEntries(), loadable->getAddressListEntries());
+        Ni = gal.numInstrAddrEntries();
+
+        task_list_entries.resize(num_tasks);  // vector<ILoadable::TaskListEntry> task_list_entries;
+      ```
     scan the set of tasks and assign to submit list entries
     ```c++
     for ( size_t ti = 0; ti < num_tasks; ++ti) {
@@ -449,43 +407,32 @@ Source code reading
     ```
     
     
-    q其中涉及到的类GlobalAddressList
-    ```c++
-    class GlobalAddressList {
-    public:
-        ...
-        GlobalAddressList(size_t numTasks, const std::vector<Loadable::MemoryListEntry> &instrMemEntries, const std::vector<Loadable::AddressListEntry> &instrAddrEntries) {
-            //
-            // create mem id and address id entries for the dead page at address id == 0.
-            //
-            Loadable::MemoryListEntry  memZeroEntry(0, 4096, 4096, Loadable::MemoryListEntry::domain_sysmem(), Loadable::MemoryListEntry::flags_alloc());
-            Loadable::AddressListEntry addrZeroEntry(0, memZeroEntry.id, memZeroEntry.size);
-            m_memListEntries.push_back(memZeroEntry);
-            m_addrListEntries.push_back(addrZeroEntry);
-            m_memListEntries.insert (m_memListEntries.end(),  instrMemEntries.begin(),  instrMemEntries.end());
-            m_addrListEntries.insert(m_addrListEntries.end(), instrAddrEntries.begin(), instrAddrEntries.end());
-            m_numInstrMemEntries  = instrMemEntries.size();
-            m_numInstrAddrEntries = instrAddrEntries.size();
-            m_numTasks = numTasks;
-            m_addrListEntries.resize( 1 /*the zero entry*/ + m_numInstrAddrEntries + (TaskAddressList::numContextAddrs() * m_numTasks), addrZeroEntry /* fill with references to the zero mem entry */);
-        }
-        NvS16 taskContextBegin(NvS16 taskId) const {
-            // skip 0, then 1..n is 1..numInstrAddrEntries
-            return (m_numInstrAddrEntries + 1) + (taskId * TaskAddressList::numContextAddrs());
-        }
-        NvS16 taskContextEnd(NvS16 taskId) const { // ala iterator, points to one-beyond
-            return taskContextBegin(taskId) + TaskAddressList::numContextAddrs();
-        }
-        ...
-    protected:
-        size_t m_numInstrMemEntries;
-        size_t m_numInstrAddrEntries;
-        vector<ILoadable::MemoryListEntry> m_memListEntries;
-        vector<ILoadable::AddressListEntry> m_addrListEntries;
-        size_t m_numTasks;
-    };
-    ```
 
+    
+          * This version hands back to the activate profile with only the name of the profile for look up later. This creates the "same name as the profile" loadable
+          ```c++
+        m_wisdom->insertProfileSymbol( ProfileFactory::i(profile), profile->getName());
+                bool Wisdom::insertProfileSymbol(IProfile *profile, const std::string &sym) {
+                      return m_symbol_table.insertProfile(profile, sym);
+                 }
+        profile->insertLoadable(std::string(profile->getName()),-1,l.i())
+        ```
+          * build flatbuffer and save it internally
+          ```c++
+          (void)l.priv()->serialize();
+          ```
+  
+         3. Getting loadable buffer and dumping it into a file which is named by TestAppArgs.profileName
+            ```c++
+            PROPAGATE_ERROR_FAIL(compiler->getLoadableImageSize(profileName.c_str(),
+                                                            &size));
+            buffer = (NvU8 *) NvDlaAlloc(size);
+            PROPAGATE_ERROR_FAIL(compiler->getLoadableImage(profileName.c_str(),
+                                                            buffer));
+            fileName = profileName + ".nvdla";
+            PROPAGATE_ERROR_FAIL(NvDlaFopen(fileName.c_str(), NVDLA_OPEN_WRITE, &file));
+            PROPAGATE_ERROR_FAIL(NvDlaFwrite(file, buffer, size));
+            ```
     
     
     
