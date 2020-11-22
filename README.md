@@ -282,7 +282,7 @@ Source code reading
     3. Compile
     4. Loadable
         * loadable file 
-        1. Updating the command parameter information into the object m_globalParams, m_compileParams of class Profile
+         1. Updating the command parameter information into the object m_globalParams, m_compileParams of class Profile
          ```c++
           NvDlaError generateProfile(const TestAppArgs* appArgs, std::string* profileName, TestInfo* i);
          ```
@@ -298,63 +298,61 @@ Source code reading
             ...
           PROPAGATE_ERROR_FAIL(emit(final_g, l));
           ```
-             _ engine_ast
-              EngineParams hold all the details needed to program the HW engine. Some of the engine parameters are directly inherited from the canonical AST equivalent operations, whereas some others are computed over the course of engine AST compilation.  In short, only those parameters which are directly needed for HW engine programming should be held in EngineParameters. Any dynamic state for assisting compilation should be held in the OpParams of respective engine nodes. 
-            * 关于emit函数 dla emu
-             begin building execution context and placing into the loadable:
-             ```c++
-              g->resetRelocEntries();
-              PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );
-              task_slot_counts.resize(g->graphlets().size()); // vector< size_t > task_slot_counts;
-              for (vector<engine_ast::Graph::Graphlet *>::iterator gli = g->graphlets().begin(); gli != g->graphlets().end(); ++gli) {
-                  engine_ast::Graph::Graphlet *graphlet = *gli;
-                  NvS16 taskId;
-                  engine_ast::Node *first_node;
-                  NVDLA_UNUSED(taskId);
-                  first_node = *graphlet->nodeList().begin();
-                  task_starting_points.push_back(graphlet->nodeList().begin()); // vector< vector<engine_ast::Node* >::iterator > task_starting_points;
-                  task_ids.push_back(first_node->taskId());  // vector< NvS16  > task_ids;
-                  task_slot_counts[task_starting_points.size() - 1] = graphlet->nodeList().size();  // vector< size_t > task_slot_counts;
-              }
-              num_tasks = task_starting_points.size();
-              gal = GlobalAddressList(num_tasks, loadable->getMemoryListEntries(), loadable->getAddressListEntries());
-              Ni = gal.numInstrAddrEntries();
-              task_list_entries.resize(num_tasks);  // vector<ILoadable::TaskListEntry> task_list_entries;
-             ```
-
-    scan the set of tasks and assign to submit list entries
-    ```c++
-    for ( size_t ti = 0; ti < num_tasks; ++ti) {
-        ILoadable::SubmitListEntry sle;
-        sle.id = task_ids.at(ti);
-        sle.tasks.push_back(sle.id);
-        submit_list_entries.push_back(sle);
-    }
-    ```
-    One chain (target 0) exists to provide inter-task synchronization. This is the chain that keeps cpu(emu) and hw(dla) tasks synchronized. At the end of that chain is an output-bindable even that the caller can use to wait for completion. 
-    ```c++
-    event_list_entries.clear();
-    event.id     = 0;
-    event.val    = 0;
-    event.target = 0;
-    ```
-    for each task ...
-    ```c++
-    too too too too long 耍流氓版
-    ```
-    Now that all the tasks have set up their context state elements the memory and address lists are viable.
-    ```c++
-    loadable->setMemoryListEntries(gal.memList());
-    loadable->setAddressListEntries(gal.addrList());
-    loadable->setTaskListEntries(task_list_entries);
-    loadable->setSubmitListEntries(submit_list_entries);
-    loadable->setEventListEntries(event_list_entries);
-    loadable->setRelocEntries(g->getRelocEntries());
-    ```
-    
-    
-
-    
+          >> engine_ast
+               EngineParams hold all the details needed to program the HW engine. Some of the engine parameters are directly inherited from the canonical AST equivalent operations, whereas some others are computed over the course of engine AST compilation.  In short, only those parameters which are directly needed for HW engine programming should be held in EngineParameters. Any dynamic state for assisting compilation should be held in the OpParams of respective engine nodes. 
+          >> 关于emit函数 dla emu
+               begin building execution context and placing into the loadable:
+               
+               ```c++
+                g->resetRelocEntries();
+                PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );
+                task_slot_counts.resize(g->graphlets().size()); // vector< size_t > task_slot_counts;
+                for (vector<engine_ast::Graph::Graphlet *>::iterator gli = g->graphlets().begin(); gli != g->graphlets().end(); ++gli) {
+                    engine_ast::Graph::Graphlet *graphlet = *gli;
+                    NvS16 taskId;
+                    engine_ast::Node *first_node;
+                    NVDLA_UNUSED(taskId);
+                    first_node = *graphlet->nodeList().begin();
+                    task_starting_points.push_back(graphlet->nodeList().begin()); // vector< vector<engine_ast::Node* >::iterator > task_starting_points;
+                    task_ids.push_back(first_node->taskId());  // vector< NvS16  > task_ids;
+                    task_slot_counts[task_starting_points.size() - 1] = graphlet->nodeList().size();  // vector< size_t > task_slot_counts;
+                }
+                num_tasks = task_starting_points.size();
+                gal = GlobalAddressList(num_tasks, loadable->getMemoryListEntries(), loadable->getAddressListEntries());
+                Ni = gal.numInstrAddrEntries();
+                task_list_entries.resize(num_tasks);  // vector<ILoadable::TaskListEntry> task_list_entries;
+                
+               ```
+          scan the set of tasks and assign to submit list entries
+          ```c++
+          for ( size_t ti = 0; ti < num_tasks; ++ti) {
+              ILoadable::SubmitListEntry sle;
+              sle.id = task_ids.at(ti);
+              sle.tasks.push_back(sle.id);
+              submit_list_entries.push_back(sle);
+          }
+          ```
+          One chain (target 0) exists to provide inter-task synchronization. This is the chain that keeps cpu(emu) and hw(dla) tasks synchronized. At the end of that chain is an output-bindable even that the caller can use to wait for completion. 
+          ```c++
+          event_list_entries.clear();
+          event.id     = 0;
+          event.val    = 0;
+          event.target = 0;
+          ```
+          for each task ...
+          ```c++
+          too too too too long 耍流氓版
+          ```
+          Now that all the tasks have set up their context state elements the memory and address lists are viable.
+          ```c++
+          loadable->setMemoryListEntries(gal.memList());
+          loadable->setAddressListEntries(gal.addrList());
+          loadable->setTaskListEntries(task_list_entries);
+          loadable->setSubmitListEntries(submit_list_entries);
+          loadable->setEventListEntries(event_list_entries);
+          loadable->setRelocEntries(g->getRelocEntries());
+          ```
+      
           * This version hands back to the activate profile with only the name of the profile for look up later. This creates the "same name as the profile" loadable
           ```c++
         m_wisdom->insertProfileSymbol( ProfileFactory::i(profile), profile->getName());
