@@ -29,51 +29,7 @@ Source code reading
 ### Workflow of Compiler
 
 1. important structures 
-
   ```c++
-  struct TestInfo{
-    // common
-    nvdla::IWisdom* wisdom;
-    std::string wisdomPath;
-    // parse
-    std::string modelsPath;
-    std::string profilesPath;
-    std::string calibTablesPath;
-    // runtime
-    nvdla::IRuntime* runtime;
-    nvdla::ILoadable* compiledLoadable;
-    NvU8 *pData;
-    std::string inputImagesPath;
-    std::string inputLoadablePath;
-    std::map<std::string, NvDlaImage*> inputImages;
-    std::map<std::string, void *> inputBuffers;
-    std::map<std::string, NvDlaImage*> outputImages;
-    std::map<std::string, void *> outputBuffers;
-    std::vector<SubmitContext*> submits;
-    NvU32 timeout;
-    NvU16 numBatches; // runtime's point-of-view
-    NvU32 numSubmits; };
-    
-  struct TestAppArgs{
-    std::string project;
-    std::string inputPath;
-    std::string inputName;
-    std::string outputPath;
-    std::string testname;
-    std::string testArgs;
-    std::string prototxt; // This should be folded into testArgs
-    std::string caffemodel; // This should be folded into testArgs
-    std::string cachemodel; // This should be folded into testArgs
-    std::string profileName; // ok here?
-    std::string profileFile;
-    std::string configtarget;
-    std::string calibTable;
-    nvdla::QuantizationMode quantizationMode;
-    NvU16 numBatches;
-    nvdla::DataFormat inDataFormat;
-    nvdla::DataType computePrecision;
-    std::map<std::string, NvF32> tensorScales; };
-    
   static TestAppArgs defaultTestAppArgs = {
     /* .project = */ "OpenDLA",
     /* .inputPath = */ "./",
@@ -93,9 +49,7 @@ Source code reading
     /* .inDataFormat = */ DEFAULT_DATA_FMT,
     /* .computePrecision = */ nvdla::DataType::INT8 };
   ```
-  
 2. Set up parameters
-
 3. launchTest（)
   * testSetup
     1. clear wisdom file if any exist 
@@ -325,7 +279,6 @@ Source code reading
         ```c++
         wisdom->setNetworkTransient(network);
         ```
-
     3. Compile
     4. Loadable
         * loadable file 
@@ -339,15 +292,15 @@ Source code reading
           ```
           * NVDLA network object --> NVDLA Canonical Graph --> NVDLA engin_ast Graph --> Optimized NVDLA engine_ast Graph --> Final Graph           
           * Final Graph --> loadable file
-          ```c++ 
-          LoadableFactory::PrivPair<ILoadable *, Loadable*> l(0, 0);
-          engine_ast::Graph *final_g = 0;
-            ...
-          PROPAGATE_ERROR_FAIL(emit(final_g, l));
-          ```
-        1. engine_ast
-         EngineParams hold all the details needed to program the HW engine. Some of the engine parameters are directly inherited from the canonical AST equivalent operations, whereas some others are computed over the course of engine AST compilation.  In short, only those parameters which are directly needed for HW engine programming should be held in EngineParameters. Any dynamic state for assisting compilation should be held in the OpParams of respective engine nodes. 
-          2. engine_ast  
+                ```c++ 
+                LoadableFactory::PrivPair<ILoadable *, Loadable*> l(0, 0);
+                engine_ast::Graph *final_g = 0;
+                  ...
+                PROPAGATE_ERROR_FAIL(emit(final_g, l));
+                ```
+                1. engine_ast
+                 EngineParams hold all the details needed to program the HW engine. Some of the engine parameters are directly inherited from the canonical AST equivalent operations, whereas some others are computed over the course of engine AST compilation.  In short, only those parameters which are directly needed for HW engine programming should be held in EngineParameters. Any dynamic state for assisting compilation should be held in the OpParams of respective engine nodes. 
+                 2. engine_ast  
         关于emit函数:
         dla 
         emu
