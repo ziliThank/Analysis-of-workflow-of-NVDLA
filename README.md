@@ -317,7 +317,7 @@ Source code reading
           }
           num_tasks = task_starting_points.size();
           gal = GlobalAddressList(num_tasks, loadable->getMemoryListEntries(), loadable->getAddressListEntries());
-          Ni = gal.numInstrAddrEntries();
+          Ni = gal.numInstrAddrEntries(); 
           task_list_entries.resize(num_tasks);  // vector<ILoadable::TaskListEntry> task_list_entries;
          ```
           * scan the set of tasks and assign to submit list entries
