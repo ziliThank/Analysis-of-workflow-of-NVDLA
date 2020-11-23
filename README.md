@@ -304,8 +304,9 @@ Source code reading
                   Loadable is a binary file that contains neural network execution information. They describe how a model performance inference on NVDLA hardware. It has hierarchical data structures that break down model inference into a sequence of task execution. It also describes how data is stored and mapped in memory. It includes the hardware configuration for each their execution. Here is the first level data structures in a loadable. The SubmitListEntry and TaskListEntry describes the execution sequence of operators. The AddressListEntry and MemoryListEntry describes a memory mapping. The Blob stores wait constants. The TensorDescListEntry describes tensors. In order to generate loadables, we need to decide which hardware units to use and the proper configurations for those hardware units. We need to fill in computation parameters and prepare the source and destination data information for each operators. For unsupported operators we have to fall back to CPU for execution by using an emulator configuration procedure. In a NVDLA software stack, the user mode driver parses loadable and the kernel mode driver drive NVDLA based on the neural network information. NVDLA loadable is a communication interface between the NVDLA compiler and a NVDLA software stack.
                    ```c++
                       g->resetRelocEntries();   // clear the vector<ILoadable::RelocEntry> m_relocEntries of class Graph
-                      PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );  // 
+                      PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );  //  prepares address and memory list entires, and sets MemoryListEntries, AddressListEntries and TensorDescListEntries for object loadable. a. creates meory id for each memory pool   b. creates memory id entries for non-pooled buffers   c. surfaces generate address id entries
                       task_slot_counts.resize(g->graphlets().size()); // vector< size_t > task_slot_counts;
+                      // recording the first node of each Graphlet into the task_sharing_points and recordiing the number of nodes of each Graphlet into task_slot_counts
                       for (vector<engine_ast::Graph::Graphlet *>::iterator gli = g->graphlets().begin(); gli != g->graphlets().end(); ++gli) {
                           engine_ast::Graph::Graphlet *graphlet = *gli;
                           NvS16 taskId;
@@ -316,29 +317,28 @@ Source code reading
                           task_ids.push_back(first_node->taskId());  // vector< NvS16  > task_ids;
                           task_slot_counts[task_starting_points.size() - 1] = graphlet->nodeList().size();  // vector< size_t > task_slot_counts;
                       }
+                      // a task is denoted as one Graphlet
                       num_tasks = task_starting_points.size();
-                      gal = GlobalAddressList(num_tasks, loadable->getMemoryListEntries(), loadable->getAddressListEntries());
-                      Ni = gal.numInstrAddrEntries(); 
+                      gal = GlobalAddressList(num_tasks, loadable->getMemoryListEntries(), loadable->getAddressListEntries());  // create mem id and address id entries for the dead page at address id == 0
+                      Ni = gal.numInstrAddrEntries();   // return the size of loadable->getAddressListEntries(), namely size of the initial address list
                       task_list_entries.resize(num_tasks);  // vector<ILoadable::TaskListEntry> task_list_entries;
                    ```
-                * scan the set of tasks and assign to submit list entries
+                * scan the set of tasks and assign to submit list entries (recording the task id of first node for each Graphlet into SubmitListEntry )
                   ```c++
                     for ( size_t ti = 0; ti < num_tasks; ++ti) {
                         ILoadable::SubmitListEntry sle;
                         sle.id = task_ids.at(ti);
                         sle.tasks.push_back(sle.id);
-                        submit_list_entries.push_back(sle);
+                        submit_list_entries.push_back(sle);   // vector<ILoadable::SubmitListEntry> submit_list_entries
                     }
                   ```
                 * One chain (target 0) exists to provide inter-task synchronization. This is the chain that keeps cpu(emu) and hw(dla) tasks synchronized. At the end of that chain is an output-bindable even that the caller can use to wait for completion. 
                   ```c++
-                    event_list_entries.clear();
+                    event_list_entries.clear();   // vector<ILoadable::EventListEntry> event_list_entries
                     event.id     = 0;
                     event.val    = 0;
                     event.target = 0;
-                  ```
-                * for each task ...
-                  ```c++
+
                     too too too too long 耍流氓版
                   ```
                 * Now that all the tasks have set up their context state elements the memory and address lists are viable.
