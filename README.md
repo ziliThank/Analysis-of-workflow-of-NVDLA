@@ -300,7 +300,8 @@ Source code reading
                     PROPAGATE_ERROR_FAIL(emit(final_g, l));
                     // NvDlaError Compiler::emit(engine_ast::Graph * g, LoadableFactory::LoadablePrivPair &l){...}
                   ```
-                * begin building execution context and placing into the loadable:
+                * begin building execution context and placing into the loadable
+                  Loadable is a binary file that contains neural network execution information. They describe how a model performance inference on NVDLA hardware. It has hierarchical data structures that break down model inference into a sequence of task execution. It also describes how data is stored and mapped in memory. It includes the hardware configuration for each their execution. Here is the first level data structures in a loadable. The SubmitListEntry and TaskListEntry describes the execution sequence of operators. The AddressListEntry and MemoryListEntry describes a memory mapping. The Blob stores wait constants. The TensorDescListEntry describes tensors. In order to generate loadables, we need to decide which hardware units to use and the proper configurations for those hardware units. We need to fill in computation parameters and prepare the source and destination data information for each operators. For unsupported operators we have to fall back to CPU for execution by using an emulator configuration procedure. In a NVDLA software stack, the user mode driver parses loadable and the kernel mode driver drive NVDLA based on the neural network information. NVDLA loadable is a communication interface between the NVDLA compiler and a NVDLA software stack.
                    ```c++
                       g->resetRelocEntries();   // clear the vector<ILoadable::RelocEntry> m_relocEntries of class Graph
                       PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );  // 
