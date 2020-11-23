@@ -335,7 +335,7 @@ Source code reading
                 * One chain (target 0) exists to provide inter-task synchronization. This is the chain that keeps cpu(emu) and hw(dla) tasks synchronized. At the end of that chain is an output-bindable even that the caller can use to wait for completion. 
                   ```c++
                     event_list_entries.clear();   // vector<ILoadable::EventListEntry> event_list_entries
-                    event.id     = 0;
+                    event.id     = 0;    // ILoadable::EventListEntry event
                     event.val    = 0;
                     event.target = 0;
 
