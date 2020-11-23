@@ -302,8 +302,8 @@ Source code reading
                   ```
                 * begin building execution context and placing into the loadable:
                    ```c++
-                      g->resetRelocEntries();
-                      PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );
+                      g->resetRelocEntries();   // clear the vector<ILoadable::RelocEntry> m_relocEntries of class Graph
+                      PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );  // 
                       task_slot_counts.resize(g->graphlets().size()); // vector< size_t > task_slot_counts;
                       for (vector<engine_ast::Graph::Graphlet *>::iterator gli = g->graphlets().begin(); gli != g->graphlets().end(); ++gli) {
                           engine_ast::Graph::Graphlet *graphlet = *gli;
