@@ -301,7 +301,6 @@ Source code reading
                     // NvDlaError Compiler::emit(engine_ast::Graph * g, LoadableFactory::LoadablePrivPair &l){...}
                   ```
                 * begin building execution context and placing into the loadable
-                  Loadable is a binary file that contains neural network execution information. They describe how a model performance inference on NVDLA hardware. It has hierarchical data structures that break down model inference into a sequence of task execution. It also describes how data is stored and mapped in memory. It includes the hardware configuration for each their execution. Here is the first level data structures in a loadable. The SubmitListEntry and TaskListEntry describes the execution sequence of operators. The AddressListEntry and MemoryListEntry describes a memory mapping. The Blob stores wait constants. The TensorDescListEntry describes tensors. In order to generate loadables, we need to decide which hardware units to use and the proper configurations for those hardware units. We need to fill in computation parameters and prepare the source and destination data information for each operators. For unsupported operators we have to fall back to CPU for execution by using an emulator configuration procedure. In a NVDLA software stack, the user mode driver parses loadable and the kernel mode driver drive NVDLA based on the neural network information. NVDLA loadable is a communication interface between the NVDLA compiler and a NVDLA software stack.
                    ```c++
                       g->resetRelocEntries();   // clear the vector<ILoadable::RelocEntry> m_relocEntries of class Graph
                       PROPAGATE_ERROR_FAIL( g->prepareMemoryListEntries(loadable) );  //  prepares address and memory list entires, and sets MemoryListEntries, AddressListEntries and TensorDescListEntries for object loadable. a. creates meory id for each memory pool   b. creates memory id entries for non-pooled buffers   c. surfaces generate address id entries
@@ -337,12 +336,25 @@ Source code reading
                     event_list_entries.clear();   // vector<ILoadable::EventListEntry> event_list_entries
                     event.id     = 0;    // ILoadable::EventListEntry event
                     event.val    = 0;
-                    event.target = 0;
-
-                    too too too too long 耍流氓版
+                    event.target = 0;   // used for synchronization
+                    // for each task ...
+                    for ( size_t ti = 0; ti < num_tasks; ++ti) {
+                          ...
+                          anni = task_starting_points[ti];
+                          if ( ! (*anni)->isEMUEngineType() ) { 
+                                  // for NVDLA operations
+                                  ...
+                          } else {
+                                  // for CPU operations
+                                  ...
+                          }
                   ```
                 * Now that all the tasks have set up their context state elements the memory and address lists are viable.
                   ```c++
+                    //  The SubmitListEntry and TaskListEntry describes the execution sequence of operators. 
+                    //  The AddressListEntry and MemoryListEntry describes a memory mapping. 
+                    //  The Blob stores wait constants. 
+                    //  The TensorDescListEntry describes tensors. 
                     loadable->setMemoryListEntries(gal.memList());
                     loadable->setAddressListEntries(gal.addrList());
                     loadable->setTaskListEntries(task_list_entries);
@@ -350,16 +362,18 @@ Source code reading
                     loadable->setEventListEntries(event_list_entries);
                     loadable->setRelocEntries(g->getRelocEntries());
                   ```
-                * This version hands back to the activate profile with only the name of the profile for look up later. This creates the "same name as the profile" loadable
+             * This version hands back to the activate profile with only the name of the profile for look up later. This creates the "same name as the profile" loadable
+                  ```c++
+                  //recording the profile and its corresponding profileName info into attribuates 'map<string, IProfile*> m_sym_profile' and 'map<IProfile*, string> m_profile_sym' of SymbolTable object m_symbol_state of class Wisdom
+                  m_wisdom->insertProfileSymbol( ProfileFactory::i(profile), profile->getName());
+                        bool Wisdom::insertProfileSymbol(IProfile *profile, const std::string &sym) {
+                              return m_symbol_table.insertProfile(profile, sym);
+                        }
+                   profile->insertLoadable(std::string(profile->getName()),-1,l.i())
+                ```
+             * build flatbuffer and save it internally
                 ```c++
-              m_wisdom->insertProfileSymbol( ProfileFactory::i(profile), profile->getName());
-                      bool Wisdom::insertProfileSymbol(IProfile *profile, const std::string &sym) {
-                            return m_symbol_table.insertProfile(profile, sym);
-                       }
-              profile->insertLoadable(std::string(profile->getName()),-1,l.i())
-              ```
-                * build flatbuffer and save it internally
-                ```c++
+                // utilize the info in 'map<string, Symbol> mSymbols', 'vector<MemoryListEntry> mMemoryListEntries', 'vector<TaskListEntry> mTaskListEntries', ..., 'vector<RelocEntry> mRelocEntries' of class Loadable to generate its attribuate 'flatbuffers::FlatBufferBuilder mFbb' 
                 (void)l.priv()->serialize();
                 ```
   
