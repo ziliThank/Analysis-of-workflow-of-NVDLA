@@ -401,7 +401,7 @@ NVDLA Virtual Platform
     4. Channel Data Processor – multi-channel averaging engine for advanced normalization functions.
     5. Dedicated Memory and Data Reshape Engines – memory-to-memory transformation acceleration for tensor reshape and copy operations.
 
-   ![image](http://github.com/ziliThank/Analysis-of-workflow-of-NVDLA/raw/master/images/NVDLA_architecture.jpg)
+   ![image](http://github.com/ziliThank/Analysis-of-workflow-of-NVDLA/raw/main/images/NVDLA_architecture.svg)
    Each of these blocks are separate and independently configurable. A system that has no need for pooling, for instance, can remove the planar averaging engine entirely; or, a system that needs additional convolutional performance can scale up the performance of the convolution unit without modifying other units in the accelerator. 
    Scheduling operations for each unit are delegated to a co-processor or CPU; they operate on extremely fine-grained scheduling boundaries with each unit operating independently. This requirement for closely-managed scheduling can be made part of the NVDLA sub-system with the addition of a dedicated management coprocessor (“headed” implementation), or this functionality can be fused with the higher-level driver implementation on the main system processor (“headless” implementation).
 ### Software
