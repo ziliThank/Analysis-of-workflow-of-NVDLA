@@ -387,11 +387,6 @@ Source code reading
               PROPAGATE_ERROR_FAIL(NvDlaFwrite(file, buffer, size));
           ```
     
-    
-    
-
-
-
 
 NVDLA Virtual Platform
 ======================
