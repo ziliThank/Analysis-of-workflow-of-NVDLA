@@ -402,8 +402,14 @@ NVDLA Virtual Platform
     5. Dedicated Memory and Data Reshape Engines – memory-to-memory transformation acceleration for tensor reshape and copy operations.
 
    ![image](http://github.com/ziliThank/Analysis-of-workflow-of-NVDLA/raw/main/images/NVDLA_architecture.svg)
+   
    Each of these blocks are separate and independently configurable. A system that has no need for pooling, for instance, can remove the planar averaging engine entirely; or, a system that needs additional convolutional performance can scale up the performance of the convolution unit without modifying other units in the accelerator. 
    Scheduling operations for each unit are delegated to a co-processor or CPU; they operate on extremely fine-grained scheduling boundaries with each unit operating independently. This requirement for closely-managed scheduling can be made part of the NVDLA sub-system with the addition of a dedicated management coprocessor (“headed” implementation), or this functionality can be fused with the higher-level driver implementation on the main system processor (“headless” implementation).
+   The NVDLA architecture can be programmed in two modes of operation: indepedent mode, and fused mode. 
+   **Indepdent.** When operating independently, each functional block is configured for when and what it executes, with each block working on its assigned task. Independent operation begins and ends with the assigned block performing memory-to-memory operations, in and out of main system memory or dedicated SRAM memory. 
+   **Fused.** Fused operation is similar to independent operation, however, some blocks can be assembled as a pipeline. This improves performance by bypassing the round trip through memory, instead having blocks communicate with each other through small FIFOs. 
+  NVDLA is a fixed function accelerator engine which is targeted towards deep learning.
+  NVDLA receives commands from the host processor via the CSB (configuration Bus) interface. The two independent memory interfaces provide access to storage for data feeding NVDLA and output data from NVDLA. The interrpt provides a notification to a controlling CPU that NVDLA has completed a task. 
 ### Software
 #### Compilation tools: model conversion
    Compiler is responsible for creating a sequence of hardware layers that are optimized for a given NVDLA configuration; having an optimized network of hardware layers increases performance by reducing model size, load and run times.
@@ -418,7 +424,7 @@ NVDLA Virtual Platform
     2. Kernel Mode Driver
    Consists of drivers and firmware that do the work of scheduling layer operations on NVDLA and programming the NVDLA registers to configure each functional block. 
    
-   Sample platforms are provided which allow users to observe, evaluate, and test NVDLA in a minimal SoC environment. A minimum SoC system configuration consists of a CPU, an NVDLA instance, an interconnect, and memories.
+
    
    Software
 The initial NVDLA open-source release includes software for a “headless” implementation, compatible with Linux. Both a kernel-mode driver and a user-mode test utility are provided in source form, and can run on top of otherwise-unmodified Linux systems.
@@ -428,19 +434,22 @@ The initial NVDLA open-source release includes software for a “headless” imp
    For the configurable release, there are currently two spec files included: “nv_large” which has 2048 INT8 MAC’s, and “nv_small” which has 64 INT8 MAC’s plus some other reductions; the non-configurable release has a single spec file, “nv_full”, which has 2048 multi-precision MAC units
    
    If building the Virtual Platform, or another application that uses the NVDLA Cmodel, the following command will build it and install it into outdir/nv_full/cmod/release: ./tools/bin/tmake -build cmod_top
-### hardware
-  NVDLA is a fixed function accelerator engine which is targeted towards deep learning.
-  NVDLA receives commands from the host processor via the CSB (configuration Bus) interface. The two independent memory interfaces provide access to storage for data feeding NVDLA and output data from NVDLA. The interrpt provides a notification to a controlling CPU that NVDLA has completed a task. 
+
  ### workflow
  The typical flow for inferencing begins with the NVDLA management processor (either a microcontroller in a "headed" implementation, or the main CPU in a "headless" implementation) sending down the configuration of one hardware layer, along with an "activate" command. If data dependencies do not preclude this, multiple hardware layers can be sent down to different engines and activated at the same time. Because every engine has a double-buffer for its configuration registers, it can also capture a second laye's configuration to begin immediately processing when the activate layer has completed. Once a hardware engine finishes its activate task, it will issue an interrupt to the management processor to report the completion, and the management processor will then begin the process again. This kind of command-execute-interrupt flow repeats until inference on the entire network is complete. 
-### Simulation
-  Virtual platforms reproduce system behavior, execution of target software, debug and development in the absence of "real" hardware platform. 
+ 
+### Sample Platforms
+   Sample platforms are provided which allow users to observe, evaluate, and test NVDLA in a minimal SoC environment. A minimum SoC system configuration consists of a CPU, an NVDLA instance, an interconnect, and memories. 
+#### Simulation
+  Virtual platforms reproduce system behavior, execution of target software, debug and development in the absence of "real" hardware platform. The NVDLA open source release includes a simulation platform based on GreenSocs QBox. In this platform, a QEMU CPU model is combined with the NVDLA SystemC model, providing a register-accurate system on which software can be quickly developed and debugged. The Linux Kernel-mode driver and a user-mode test utility are provided to run on this simulation platform. 
   The SystemC language allows hardware descriptions to be constructed in a C++ based language. However, as the complexity of the IPs increases, the SystemC simulation environment is not necessarily suitable to provide suitably fast models. It is theoreticaly possible to simulate complex IP's such as CPU's within SystemC simulation kernel. But performance can be an issue, especially when the processor is modelled at RTL level that is computationally intensive. A better solution for complex IPs like CPUs is to model it in a virtualizer or emulator and then to integrate the model into a SystemC simulation environment. Moreover, the TLM-2.0 (Transaction-Level Modeling) standard, which is an extension of SystemC, improves interoperability between memory mapped bus models. It also includes the notion of time quantum which was explicitly intended to assist with this sort of integration. 
-#### QEMU
+##### QEMU
   QEMU is a generic and open source machine & userspace emulator and virtualizer. QEMU is capable of emulating a complete machine in software without any need for hardware virtualization support. 
   QBox is an industrial solution for virtual platform simulation using QEMU and SystemC TLM-2.0.
   QBox is an integration of QEMU virtualizer and emulator in a SystemC model. QBox or QEMU in a (SystemC)Box, treats QEMU as a standard SystemC module within a larger SystemC simulation context. SystemC simulation kernel remains the "master" of the simulation, while QEMU has to fulfi the SystemC API requirements. This solution is an open source QEMU implementation wrapped in a set of SystemC TLM-2.0 interfaces. 
   Depending of the host machine, QBox emulates or virtualizes the core part of the SoC. As QEMU is written in C (as opposed to SystemC which is standard C++ class binary), a wrapper called TLM2C is required to connect them. 
-  
-#### SystemC
+
+#### FPGA
+   This sample platform maps the NVDLA Verilog model onto an FPGA, it provides a synthesizable example of instantiating NVDLA in a real design. In this platform, the NVDLA SystemC model is not used, software register reads and writes execute directly on the real RTL environment. 
+   This allows for limited cycle-counting performance evaluation, and also allows for even faster testing of software against larger, more complex networks. The FPGA model is intended for validation only, no effort has been made to optimize cycle time, design size, or power for the FPGA platform, performance of the FPGA model is not directly comparable against other FPGA-based Deep Learning accelerators. 
 
