@@ -190,87 +190,87 @@ Source code reading
           * integrating whole information into network from caffemodel and prototxt
           ```c++
           const IBlobNameToTensor* CaffeParser::parse(const char* deployFile, const char* modelFile, INetwork * network){
-            ...
-            network->setPoolingOutputDimensionsFormula(new CaffeParserPoolingDimsCallback);   //network->mPoolDims = new CaffeParserPoolingDimsCallback;
-            // reading information from caffemodel to mModel, which will be used for generating the variable weights
-            mModel = new dc::NetParameter();
-            readBinaryProto(mModel/*.get()*/, modelFile, mProtobufBufferSize);
-            // reading information from prototxt to mDeploy
-            mDeploy = new dc::NetParameter();
-            readTextProto(mDeploy/*.get()*/, deployFile);
-            // recording the weights info into variable weights
-            CaffeWeightFactory weights(*mModel/**mModel.get()*/, false /*weightType == DataType::kHALF*/, mTmpAllocs);
-            // integrating info into mMap, network->mTensors and network->mInputs
-            for (int i = 0; i < mDeploy->input_size(); i++){
-              Dims4 dims;
-              ... // setting dims parameter
-              ITensor* tensor = network->addInput(mDeploy->input().Get(0).c_str(), dims);   //adding the generated tensor object into network->mTensors; adding the generated tensor object into network->mInputs.
-              mBlobNameToTensor->add(mDeploy->input().Get(0), tensor);   // recording tensor info into mBlobNameToTensor->mMap
-            }
-            // parsing each layer, integrating info into network->mlayers and recording output tensor info of each layer into mMap
-            for (int i = 0; i < mDeploy->layer_size() && ok; i++){
-              const dc::LayerParameter& layerMsg = mDeploy->layer(i);
-              if (layerMsg.type() == "Dropout"){
-                mBlobNameToTensor->add(layerMsg.top().Get(0), mBlobNameToTensor->find(layerMsg.bottom().Get(0).c_str()));
-                continue;
-              }
-              if (layerMsg.type() == "Input"){
-                const dc::InputParameter& p = layerMsg.input_param();
-                for (int i = 0; i < layerMsg.top_size(); i++){
-                  const dc::BlobShape& shape = p.shape().Get(i);
-                  Dims4 dims(shape.dim().Get(0), shape.dim().Get(1), shape.dim().Get(2), shape.dim().Get(3));
-                  ITensor* tensor = network->addInput(layerMsg.top(i).c_str(), dims);
-                  mBlobNameToTensor->add(layerMsg.top().Get(i), tensor);
+                ...
+                network->setPoolingOutputDimensionsFormula(new CaffeParserPoolingDimsCallback);   //network->mPoolDims = new CaffeParserPoolingDimsCallback;
+                // reading information from caffemodel to mModel, which will be used for generating the variable weights
+                mModel = new dc::NetParameter();
+                readBinaryProto(mModel/*.get()*/, modelFile, mProtobufBufferSize);
+                // reading information from prototxt to mDeploy
+                mDeploy = new dc::NetParameter();
+                readTextProto(mDeploy/*.get()*/, deployFile);
+                // recording the weights info into variable weights
+                CaffeWeightFactory weights(*mModel/**mModel.get()*/, false /*weightType == DataType::kHALF*/, mTmpAllocs);
+                // integrating info into mMap, network->mTensors and network->mInputs
+                for (int i = 0; i < mDeploy->input_size(); i++){
+                      Dims4 dims;
+                      ... // setting dims parameter
+                      ITensor* tensor = network->addInput(mDeploy->input().Get(0).c_str(), dims);   //adding the generated tensor object into network->mTensors; adding the generated tensor object into network->mInputs.
+                      mBlobNameToTensor->add(mDeploy->input().Get(0), tensor);   // recording tensor info into mBlobNameToTensor->mMap
                 }
-                continue;
-              }
-              if (layerMsg.type() == "Flatten"){
-                ITensor* tensor = (*mBlobNameToTensor)[layerMsg.bottom().Get(0)];
-                (*mBlobNameToTensor)[layerMsg.top().Get(0)] = tensor;
-                std::cout << "Warning: Flatten layer ignored." << std::endl;
-                continue;
-              }
-              LayerParseFnMap::iterator v = gParseTable.find(layerMsg.type());
-              ILayer* layer = (*v->second)(network, layerMsg, weights, mBlobNameToTensor); // parsing each layer and integrating corresponding layer informaion into network->mlayers, the detail of which is explained in the following section 
-              layer->setName(layerMsg.name().c_str());
-              mBlobNameToTensor->add(layerMsg.top(0), layer->getOutput(0));   //recording the output of each layer into mBlobNameToTensor->mMap
-            }
+                // parsing each layer, integrating info into network->mlayers and recording output tensor info of each layer into mMap
+                for (int i = 0; i < mDeploy->layer_size() && ok; i++){
+                      const dc::LayerParameter& layerMsg = mDeploy->layer(i);
+                      if (layerMsg.type() == "Dropout"){
+                        mBlobNameToTensor->add(layerMsg.top().Get(0), mBlobNameToTensor->find(layerMsg.bottom().Get(0).c_str()));
+                        continue;
+                  }
+                  if (layerMsg.type() == "Input"){
+                        const dc::InputParameter& p = layerMsg.input_param();
+                        for (int i = 0; i < layerMsg.top_size(); i++){
+                              const dc::BlobShape& shape = p.shape().Get(i);
+                              Dims4 dims(shape.dim().Get(0), shape.dim().Get(1), shape.dim().Get(2), shape.dim().Get(3));
+                              ITensor* tensor = network->addInput(layerMsg.top(i).c_str(), dims);
+                              mBlobNameToTensor->add(layerMsg.top().Get(i), tensor);
+                        }
+                        continue;
+                  }
+                  if (layerMsg.type() == "Flatten"){
+                        ITensor* tensor = (*mBlobNameToTensor)[layerMsg.bottom().Get(0)];
+                        (*mBlobNameToTensor)[layerMsg.top().Get(0)] = tensor;
+                        std::cout << "Warning: Flatten layer ignored." << std::endl;
+                        continue;
+                  }
+                  LayerParseFnMap::iterator v = gParseTable.find(layerMsg.type());
+                  ILayer* layer = (*v->second)(network, layerMsg, weights, mBlobNameToTensor); // parsing each layer and integrating corresponding layer informaion into network->mlayers, the detail of which is explained in the following section 
+                  layer->setName(layerMsg.name().c_str());
+                  mBlobNameToTensor->add(layerMsg.top(0), layer->getOutput(0));   //recording the output of each layer into mBlobNameToTensor->mMap
+                }
           }
           ```
           * recording information for each layer into network（network->mlayers), taking convolutional layer as an example. 
           ```c++
           1. static ILayer* parseConvolution(INetwork *network, const dc::LayerParameter& msg, CaffeWeightFactory& weightFactory, IBlobNameToTensor* tensors){
-                ...
-                // TODO: cross-correlation vs convolution
-                layer = network->addConvolution((*tensors)[msg.bottom(0)], numOutputs, 0, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
-                return layer;
+                    ...
+                    // TODO: cross-correlation vs convolution
+                    layer = network->addConvolution((*tensors)[msg.bottom(0)], numOutputs, 0, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
+                    return layer;
              }
           2. IConvolutionLayer* Network::addConvolution(ITensor* inputTensor, int numOutputChannels, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups){
-                string name = newLayerName();
-                ITensor* output = addTensor(newTensorName());
-                Tensor*  output_priv = TensorFactory::priv(output);
-                ConvolutionLayerDiamond d = LayerFactory::newConvolutionLayer(this, name, inputTensor, output, numOutputChannels, paddingValue, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
-                output->setDimensions( d.derived().priv()->getOutputDimensions() );
-                mLayers.push_back(d.base().i());
-                return d.derived().i();
+                    string name = newLayerName();
+                    ITensor* output = addTensor(newTensorName());
+                    Tensor*  output_priv = TensorFactory::priv(output);
+                    ConvolutionLayerDiamond d = LayerFactory::newConvolutionLayer(this, name, inputTensor, output, numOutputChannels, paddingValue, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
+                    output->setDimensions( d.derived().priv()->getOutputDimensions() );
+                    mLayers.push_back(d.base().i());
+                    return d.derived().i();
              }
           3. ConvolutionLayerDiamond LayerFactory::newConvolutionLayer(INetwork * network, const std::string & name, ITensor * input, ITensor * output, int numOutputMaps, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups){
-                ...
-                base_priv = derived_priv = new ConvolutionLayer(network, name, input, output, numOutputMaps, paddingValue, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
-                ...
+                    ...
+                    base_priv = derived_priv = new ConvolutionLayer(network, name, input, output, numOutputMaps, paddingValue, kernelSize, tlPadding, brPadding, stride, dilation, kernelWeights, biasWeights, biasMode, numGroups);
+                    ...
              }
           4. ConvolutionLayer::ConvolutionLayer(INetwork* network, const std::string& name, ITensor* input, ITensor* output, int numOutputMaps, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups): Layer(network, LayerType::kCONVOLUTION, name, input, output){
-                mParams.kernelSize = kernelSize;   // each layer possesses a mParams displaying the parameters setting
-                mParams.numOutputMaps = numOutputMaps;
-                mParams.topLeftPadding = tlPadding;
-                mParams.bottomRightPadding = brPadding;
-                mParams.paddingValue = paddingValue;
-                mParams.stride = stride;
-                mParams.dilation = dilation;
-                mParams.kernelWeights = kernelWeights;
-                mParams.biasWeights = biasWeights;
-                mParams.biasMode = biasMode;
-                mParams.numGroups = numGroups;
+                    mParams.kernelSize = kernelSize;   // each layer possesses a mParams displaying the parameters setting
+                    mParams.numOutputMaps = numOutputMaps;
+                    mParams.topLeftPadding = tlPadding;
+                    mParams.bottomRightPadding = brPadding;
+                    mParams.paddingValue = paddingValue;
+                    mParams.stride = stride;
+                    mParams.dilation = dilation;
+                    mParams.kernelWeights = kernelWeights;
+                    mParams.biasWeights = biasWeights;
+                    mParams.biasMode = biasMode;
+                    mParams.numGroups = numGroups;
              }
           ```
         2. marking the network's outputs
@@ -307,14 +307,14 @@ Source code reading
                       task_slot_counts.resize(g->graphlets().size()); // vector< size_t > task_slot_counts;
                       // recording the first node of each Graphlet into the task_sharing_points and recordiing the number of nodes of each Graphlet into task_slot_counts
                       for (vector<engine_ast::Graph::Graphlet *>::iterator gli = g->graphlets().begin(); gli != g->graphlets().end(); ++gli) {
-                          engine_ast::Graph::Graphlet *graphlet = *gli;
-                          NvS16 taskId;
-                          engine_ast::Node *first_node;
-                          NVDLA_UNUSED(taskId);
-                          first_node = *graphlet->nodeList().begin();
-                          task_starting_points.push_back(graphlet->nodeList().begin()); // vector< vector<engine_ast::Node* >::iterator > task_starting_points;
-                          task_ids.push_back(first_node->taskId());  // vector< NvS16  > task_ids;
-                          task_slot_counts[task_starting_points.size() - 1] = graphlet->nodeList().size();  // vector< size_t > task_slot_counts;
+                              engine_ast::Graph::Graphlet *graphlet = *gli;
+                              NvS16 taskId;
+                              engine_ast::Node *first_node;
+                              NVDLA_UNUSED(taskId);
+                              first_node = *graphlet->nodeList().begin();
+                              task_starting_points.push_back(graphlet->nodeList().begin()); // vector< vector<engine_ast::Node* >::iterator > task_starting_points;
+                              task_ids.push_back(first_node->taskId());  // vector< NvS16  > task_ids;
+                              task_slot_counts[task_starting_points.size() - 1] = graphlet->nodeList().size();  // vector< size_t > task_slot_counts;
                       }
                       // a task is denoted as one Graphlet
                       num_tasks = task_starting_points.size();
@@ -325,10 +325,10 @@ Source code reading
                 * scan the set of tasks and assign to submit list entries (recording the task id of first node for each Graphlet into SubmitListEntry )
                   ```c++
                     for ( size_t ti = 0; ti < num_tasks; ++ti) {
-                        ILoadable::SubmitListEntry sle;
-                        sle.id = task_ids.at(ti);
-                        sle.tasks.push_back(sle.id);
-                        submit_list_entries.push_back(sle);   // vector<ILoadable::SubmitListEntry> submit_list_entries
+                            ILoadable::SubmitListEntry sle;
+                            sle.id = task_ids.at(ti);
+                            sle.tasks.push_back(sle.id);
+                            submit_list_entries.push_back(sle);   // vector<ILoadable::SubmitListEntry> submit_list_entries
                     }
                   ```
                 * One chain (target 0) exists to provide inter-task synchronization. This is the chain that keeps cpu(emu) and hw(dla) tasks synchronized. At the end of that chain is an output-bindable even that the caller can use to wait for completion. 
@@ -366,9 +366,9 @@ Source code reading
                   ```c++
                   //recording the profile and its corresponding profileName info into attribuates 'map<string, IProfile*> m_sym_profile' and 'map<IProfile*, string> m_profile_sym' of SymbolTable object m_symbol_state of class Wisdom
                   m_wisdom->insertProfileSymbol( ProfileFactory::i(profile), profile->getName());
-                        bool Wisdom::insertProfileSymbol(IProfile *profile, const std::string &sym) {
-                              return m_symbol_table.insertProfile(profile, sym);
-                        }
+                          bool Wisdom::insertProfileSymbol(IProfile *profile, const std::string &sym) {
+                                return m_symbol_table.insertProfile(profile, sym);
+                          }
                    profile->insertLoadable(std::string(profile->getName()),-1,l.i())
                 ```
              * build flatbuffer and save it internally
