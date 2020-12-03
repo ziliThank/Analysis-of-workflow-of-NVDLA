@@ -31,23 +31,23 @@ Source code reading
 1. Default parameter setting
   ```c++
   static TestAppArgs defaultTestAppArgs = {
-    /* .project = */ "OpenDLA",
-    /* .inputPath = */ "./",
-    /* .inputName = */ "",
-    /* .outputPath = */ "./",
-    /* .testname = */ "",
-    /* .testArgs = */ "",
-    /* .prototxt = */ "",
-    /* .caffemodel = */ "",
-    /* .cachemodel = */ "",
-    /* .profileName = */ "fast-math",
-    /* .profileFile = */ "",
-    /* .configtarget = */ TARGET_CONFIG_NAME,
-    /* .calibtable = */ "",
-    /* .quantizationMode = */ DEFAULT_QUANT_MODE,
-    /* .numBatches = */ DEFAULT_BATCH_SIZE,
-    /* .inDataFormat = */ DEFAULT_DATA_FMT,
-    /* .computePrecision = */ nvdla::DataType::INT8 };
+      /* .project = */ "OpenDLA",
+      /* .inputPath = */ "./",
+      /* .inputName = */ "",
+      /* .outputPath = */ "./",
+      /* .testname = */ "",
+      /* .testArgs = */ "",
+      /* .prototxt = */ "",
+      /* .caffemodel = */ "",
+      /* .cachemodel = */ "",
+      /* .profileName = */ "fast-math",
+      /* .profileFile = */ "",
+      /* .configtarget = */ TARGET_CONFIG_NAME,
+      /* .calibtable = */ "",
+      /* .quantizationMode = */ DEFAULT_QUANT_MODE,
+      /* .numBatches = */ DEFAULT_BATCH_SIZE,
+      /* .inDataFormat = */ DEFAULT_DATA_FMT,
+      /* .computePrecision = */ nvdla::DataType::INT8 };
   ```
 2. Set up parameters
 3. launchTest（)
@@ -143,22 +143,9 @@ Source code reading
               Layer(Network* network);
               ...
         public: // internally facing
-              virtual NvU16 getFactoryType() const = 0;
-              virtual bool serializeTo(WisdomContainerEntry *) const;
-              virtual bool deserializeFrom(WisdomContainerEntry *);
-
-              std::string getInputSymbol(int i) const;
-              void setInput(int i, ITensor *);
-
-              std::string getOutputSymbol(int o) const;
-              void setOutput(int o, ITensor *);
-
-              virtual bool assignSymbols(Wisdom *wisdom);
-
+              ...
         protected:
-
               INetwork* mNetwork;
-
               Layer(INetwork *n, LayerType type, const std::string& name, ITensor * const * inputs, int numInputs, ITensor * const * outputs, int numOutputs);
               Layer(INetwork *n, LayerType type, const std::string& name, std::vector<std::string> &input_symbols, int numInputs, std::vector<std::string> &output_symbols, int numOutputs);
               Layer(INetwork *n, LayerType type, const std::string& name, ITensor* input, ITensor* output);
