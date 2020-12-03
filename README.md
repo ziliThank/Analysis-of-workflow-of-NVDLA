@@ -62,47 +62,47 @@ Source code reading
         ```c++      
         class Network : public INetwork{
         public: // externally facing
-          virtual ITensor* addInput(const char* name, Dims4 dimensions);
-          //	virtual void markChanged(const ILayer*);
-          virtual bool markInput(ITensor * tensor);
-          virtual void markOutput(ITensor* tensor);
-          virtual IConvolutionLayer *    addConvolution(ITensor* input, int numOutputs, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasmode, int numGroups);
-          virtual IFullyConnectedLayer * addFullyConnected(ITensor* input, int outputSize, Weights kernelWeights, Weights biasWeights, BiasMode biasMode);
-          virtual IActivationLayer *     addActivation(ITensor* input, ActivationType type);
-          virtual IPoolingLayer *        addPooling(ITensor* input, PoolingType type, Dims2 windowSize, Dims2 stride, Dims2 tlPadding, Dims2 brPadding);
-          virtual ILRNLayer *            addLRN(ITensor* input, int window, float alpha, float beta, float k);
-          virtual IScaleLayer *          addScale(ITensor* input, ScaleMode mode, Weights shift, Weights scale, Weights power);
-          virtual IBatchNormLayer *      addBatchNorm(ITensor* input, BatchNormMode mode, Weights mean, Weights variance, float epsilon);
-          virtual ISoftMaxLayer *        addSoftMax(ITensor* input);
-          virtual IConcatenationLayer *  addConcatenation(ITensor * const * inputs, int numInputs);
-          virtual ISliceLayer *          addSlice(ITensor* input, int numOutputs);
-          virtual IDeconvolutionLayer *  addDeconvolution(ITensor* input, int numOutputs, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups);
-          virtual IElementWiseLayer *    addElementWise(ITensor* input0, ITensor* input1, ElementWiseOperation op);   
-          ...
+              virtual ITensor* addInput(const char* name, Dims4 dimensions);
+              //	virtual void markChanged(const ILayer*);
+              virtual bool markInput(ITensor * tensor);
+              virtual void markOutput(ITensor* tensor);
+              virtual IConvolutionLayer *    addConvolution(ITensor* input, int numOutputs, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasmode, int numGroups);
+              virtual IFullyConnectedLayer * addFullyConnected(ITensor* input, int outputSize, Weights kernelWeights, Weights biasWeights, BiasMode biasMode);
+              virtual IActivationLayer *     addActivation(ITensor* input, ActivationType type);
+              virtual IPoolingLayer *        addPooling(ITensor* input, PoolingType type, Dims2 windowSize, Dims2 stride, Dims2 tlPadding, Dims2 brPadding);
+              virtual ILRNLayer *            addLRN(ITensor* input, int window, float alpha, float beta, float k);
+              virtual IScaleLayer *          addScale(ITensor* input, ScaleMode mode, Weights shift, Weights scale, Weights power);
+              virtual IBatchNormLayer *      addBatchNorm(ITensor* input, BatchNormMode mode, Weights mean, Weights variance, float epsilon);
+              virtual ISoftMaxLayer *        addSoftMax(ITensor* input);
+              virtual IConcatenationLayer *  addConcatenation(ITensor * const * inputs, int numInputs);
+              virtual ISliceLayer *          addSlice(ITensor* input, int numOutputs);
+              virtual IDeconvolutionLayer *  addDeconvolution(ITensor* input, int numOutputs, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups);
+              virtual IElementWiseLayer *    addElementWise(ITensor* input0, ITensor* input1, ElementWiseOperation op);   
+              ...
         public: // internally facing
-          Network();
-          virtual ~Network();
-          virtual bool serializeTo(WisdomContainerEntry *) const;
-          virtual bool deserializeFrom(WisdomContainerEntry *);
-          virtual bool assignSymbols(Wisdom *);
+              Network();
+              virtual ~Network();
+              virtual bool serializeTo(WisdomContainerEntry *) const;
+              virtual bool deserializeFrom(WisdomContainerEntry *);
+              virtual bool assignSymbols(Wisdom *);
         protected:
-          friend class Wisdom;
-          friend class NetworkFactory;
-          void destroy();
+              friend class Wisdom;
+              friend class NetworkFactory;
+              void destroy();
         private:
-          std::string newLayerName() const;
-          std::string newTensorName() const;
-          ITensor* addTensor(const std::string & s);
-          const ILayer* findLayer(const std::string& name) const;
-          bool checkNames(const char* name);
+              std::string newLayerName() const;
+              std::string newTensorName() const;
+              ITensor* addTensor(const std::string & s);
+              const ILayer* findLayer(const std::string& name) const;
+              bool checkNames(const char* name);
         
-          // intermediate analysis result before compiler
-          std::vector<ITensor *> mTensors;    // recording all input tensors 
-          std::vector<ILayer *>  mLayers;     // recording all layers
-          std::vector<ITensor *> mInputs;     // recording all input tensors
-          std::vector<ITensor *> mOutputs;    // recording the final output tensor 
+              // intermediate analysis result before compiler
+              std::vector<ITensor *> mTensors;    // recording all input tensors 
+              std::vector<ILayer *>  mLayers;     // recording all layers
+              std::vector<ITensor *> mInputs;     // recording all input tensors
+              std::vector<ITensor *> mOutputs;    // recording the final output tensor 
 
-          OutputDimensionsFormula* mConvDims, *mDeconvDims, *mPoolDims;
+              OutputDimensionsFormula* mConvDims, *mDeconvDims, *mPoolDims;
         };
         ```
         2. recording all tensors used in model inference into mMap
@@ -110,13 +110,13 @@ Source code reading
         //recording all tensors used in model inference into mMap
         class BlobNameToTensor : public IBlobNameToTensor{
         public:
-          virtual void add(const std::string& name, ITensor* tensor);
-          virtual ITensor* find(const char* name) const;
-          virtual ITensor*& operator[](const std::string& name);
-          virtual void setTensorNames();
-          virtual ~BlobNameToTensor();
+              virtual void add(const std::string& name, ITensor* tensor);
+              virtual ITensor* find(const char* name) const;
+              virtual ITensor*& operator[](const std::string& name);
+              virtual void setTensorNames();
+              virtual ~BlobNameToTensor();
         private:
-          std::map<std::string, ITensor*> mMap;
+              std::map<std::string, ITensor*> mMap;
         };
         ```
         3. info of tensor     
@@ -125,14 +125,14 @@ Source code reading
         class Tensor  : public ITensor{
           ...
         protected:
-          Dims4             mDimensions;
-          INetwork*         mNetwork;
-          std::string       mName;    // the user name if the user provided one, else
-          DataFormat        mDataFormat;
-          DataType          mDataType;
-          TensorType        mTensorType; // the type of surface this tensor represents: image/i-o/kernel/bias
-          std::vector<NvF32> mChnlScales;     // per-channel scaling factors
-          std::vector<NvF32> mChnlOffsets;    // per-channel offsets
+              Dims4             mDimensions;
+              INetwork*         mNetwork;
+              std::string       mName;    // the user name if the user provided one, else
+              DataFormat        mDataFormat;
+              DataType          mDataType;
+              TensorType        mTensorType; // the type of surface this tensor represents: image/i-o/kernel/bias
+              std::vector<NvF32> mChnlScales;     // per-channel scaling factors
+              std::vector<NvF32> mChnlOffsets;    // per-channel offsets
         };
         ```
         4. general info of layer  
@@ -140,34 +140,34 @@ Source code reading
         // info of layer
         class Layer : public virtual ILayer{
         public: // externally facing
-          Layer(Network* network);
-          ...
+              Layer(Network* network);
+              ...
         public: // internally facing
-          virtual NvU16 getFactoryType() const = 0;
-          virtual bool serializeTo(WisdomContainerEntry *) const;
-          virtual bool deserializeFrom(WisdomContainerEntry *);
+              virtual NvU16 getFactoryType() const = 0;
+              virtual bool serializeTo(WisdomContainerEntry *) const;
+              virtual bool deserializeFrom(WisdomContainerEntry *);
 
-          std::string getInputSymbol(int i) const;
-          void setInput(int i, ITensor *);
+              std::string getInputSymbol(int i) const;
+              void setInput(int i, ITensor *);
 
-          std::string getOutputSymbol(int o) const;
-          void setOutput(int o, ITensor *);
+              std::string getOutputSymbol(int o) const;
+              void setOutput(int o, ITensor *);
 
-          virtual bool assignSymbols(Wisdom *wisdom);
+              virtual bool assignSymbols(Wisdom *wisdom);
 
         protected:
 
-          INetwork* mNetwork;
+              INetwork* mNetwork;
 
-          Layer(INetwork *n, LayerType type, const std::string& name, ITensor * const * inputs, int numInputs, ITensor * const * outputs, int numOutputs);
-          Layer(INetwork *n, LayerType type, const std::string& name, std::vector<std::string> &input_symbols, int numInputs, std::vector<std::string> &output_symbols, int numOutputs);
-          Layer(INetwork *n, LayerType type, const std::string& name, ITensor* input, ITensor* output);
-          virtual ~Layer();
+              Layer(INetwork *n, LayerType type, const std::string& name, ITensor * const * inputs, int numInputs, ITensor * const * outputs, int numOutputs);
+              Layer(INetwork *n, LayerType type, const std::string& name, std::vector<std::string> &input_symbols, int numInputs, std::vector<std::string> &output_symbols, int numOutputs);
+              Layer(INetwork *n, LayerType type, const std::string& name, ITensor* input, ITensor* output);
+              virtual ~Layer();
 
-          const LayerType mType;
-          std::string mName;
-          std::vector<ITensor *> mInputs, mOutputs;
-          std::vector<std::string> mInputSymbols, mOutputSymbols;
+              const LayerType mType;
+              std::string mName;
+              std::vector<ITensor *> mInputs, mOutputs;
+              std::vector<std::string> mInputSymbols, mOutputSymbols;
         };
         ```
         5. info of convolutional layer     
@@ -175,14 +175,14 @@ Source code reading
         //info of convolutional layer
         class ConvolutionLayer : public virtual IConvolutionLayer, public priv::Layer{
         public:
-          ConvolutionLayer(INetwork * network, const std::string & name, ITensor * input, ITensor * output, int numOutputMaps, Dims2 kernelSize, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups);
-          ConvolutionLayer(INetwork * network, const std::string & name, ITensor * input, ITensor * output, int numOutputMaps, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups);
-          virtual ~ConvolutionLayer();
-          ...
+              ConvolutionLayer(INetwork * network, const std::string & name, ITensor * input, ITensor * output, int numOutputMaps, Dims2 kernelSize, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups);
+              ConvolutionLayer(INetwork * network, const std::string & name, ITensor * input, ITensor * output, int numOutputMaps, int paddingValue, Dims2 kernelSize, Dims2 tlPadding, Dims2 brPadding, Dims2 stride, Dims2 dilation, Weights kernelWeights, Weights biasWeights, BiasMode biasMode, int numGroups);
+              virtual ~ConvolutionLayer();
+              ...
         protected:
-          friend class LayerFactory;
-          ConvolutionLayer();
-          Parameters mParams;
+              friend class LayerFactory;
+              ConvolutionLayer();
+              Parameters mParams;
         };
         ```
       * workflow
