@@ -441,10 +441,10 @@ The initial NVDLA open-source release includes software for a “headless” imp
    This allows for limited cycle-counting performance evaluation, and also allows for even faster testing of software against larger, more complex networks. The FPGA model is intended for validation only, no effort has been made to optimize cycle time, design size, or power for the FPGA platform, performance of the FPGA model is not directly comparable against other FPGA-based Deep Learning accelerators. 
 
 ### Reference links
-![1](https://github.com/JunningWu/Learning-NVDLA-Notes/wiki/Learning-NVDLA-Notes-by-Junning)
-![2](https://github.com/nvdla/sw/issues/184)
-![3](https://blog.csdn.net/zhajio/article/details/84784336)
-![4](https://note.youdao.com/ynoteshare1/index.html?id=6a0fa4ab9a362cfdabc861ecadc0dd5a&type=note)
-![5](https://github.com/prasshantg/odla_data)
-![6](https://github.com/prasshantg/personal)
-![7](http://nvdla.org/)
+[1](https://github.com/JunningWu/Learning-NVDLA-Notes/wiki/Learning-NVDLA-Notes-by-Junning)
+[2](https://github.com/nvdla/sw/issues/184)
+[3](https://blog.csdn.net/zhajio/article/details/84784336)
+[4](https://note.youdao.com/ynoteshare1/index.html?id=6a0fa4ab9a362cfdabc861ecadc0dd5a&type=note)
+[5](https://github.com/prasshantg/odla_data)
+[6](https://github.com/prasshantg/personal)
+[7](http://nvdla.org/)
