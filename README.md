@@ -377,7 +377,7 @@ Source code reading
 
 NVDLA Virtual Platform
 ======================
-## about NVDLA
+## NVDLA
   NVDLA is provided as a set of IP-core models based on open industry standards: the Verilog model is a synthesis and simulation model in RTL form, and the TLM SystemC simulation model can be used for software development, system integration and testing. 
 ### Hardware
   NVDLA introduces a modular architecture designed to simplify configuration, integration and portability; it exposes the building blocks used to accelerate core Deep Learning inference operations. NVDLA hardware is comprised of the following components:
@@ -440,3 +440,10 @@ The initial NVDLA open-source release includes software for a “headless” imp
    This sample platform maps the NVDLA Verilog model onto an FPGA, it provides a synthesizable example of instantiating NVDLA in a real design. In this platform, the NVDLA SystemC model is not used, software register reads and writes execute directly on the real RTL environment. 
    This allows for limited cycle-counting performance evaluation, and also allows for even faster testing of software against larger, more complex networks. The FPGA model is intended for validation only, no effort has been made to optimize cycle time, design size, or power for the FPGA platform, performance of the FPGA model is not directly comparable against other FPGA-based Deep Learning accelerators. 
 
+### Reference links
+![1](https://github.com/JunningWu/Learning-NVDLA-Notes/wiki/Learning-NVDLA-Notes-by-Junning)
+![2](https://github.com/nvdla/sw/issues/184)
+![3](https://blog.csdn.net/zhajio/article/details/84784336)
+![4](https://note.youdao.com/ynoteshare1/index.html?id=6a0fa4ab9a362cfdabc861ecadc0dd5a&type=note)
+![5](https://github.com/prasshantg/odla_data)
+![6](https://github.com/prasshantg/personal)
